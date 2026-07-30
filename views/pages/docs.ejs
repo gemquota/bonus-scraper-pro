@@ -1,0 +1,98 @@
+<%- include('../partials/header') %>
+<section class="docs">
+  <h1>📖 Setup Guide</h1>
+  <p class="sub">Activate the scraper with your subscription license key</p>
+
+  <div class="doc-section">
+    <h2>🔑 1. Get Your License Key</h2>
+    <p>After subscribing, your license key appears on the <a href="/dashboard">dashboard</a>.</p>
+    <p>Format: <code>SCRPR-XXXXXXXX-XXXXXXXX-XXXXXXXX</code></p>
+  </div>
+
+  <div class="doc-section">
+    <h2>🐍 2. Set Your License Key</h2>
+    <p>The scraper reads your license from the <code>SCRAPER_LICENSE_KEY</code> environment variable:</p>
+    <pre><code>export SCRAPER_LICENSE_KEY="SCRPR-XXXXXXXX-XXXXXXXX-XXXXXXXX"
+python3 main.py</code></pre>
+    <p>On each startup, the scraper validates your license against our server. If today matches your tier's schedule, it runs a full scrape. Otherwise it skips.</p>
+  </div>
+
+  <div class="doc-section">
+    <h2>📋 3. Tier Comparison</h2>
+    <table class="doc-table">
+      <tr><th>Feature</th><th>Starter</th><th>Pro</th><th>Elite</th></tr>
+      <tr><td>Price</td><td><strong>$47/mo</strong></td><td><strong>$97/mo</strong></td><td><strong>$197/mo</strong></td></tr>
+      <tr><td>Scrape Days</td><td>Monday</td><td>Mon + Thu + Sat</td><td>Daily</td></tr>
+      <tr><td>Scrapes/week</td><td>1</td><td>3</td><td>7</td></tr>
+      <tr><td>Data Level</td><td>Standard</td><td>Advanced</td><td>Expert</td></tr>
+      <tr><td>CSV Export</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>JSON Export</td><td>✕</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Value Scoring</td><td>✕</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Filtered Export</td><td>✕</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Full-Text Search</td><td>✕</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Raw Data Access</td><td>✕</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Custom Fields</td><td>✕</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Priority Support</td><td>✕</td><td>✕</td><td>✓</td></tr>
+    </table>
+    <p style="margin-top:12px;color:var(--text-muted);font-size:0.85rem">All plans include a <strong>free first month</strong>. Cancel anytime before your first bill.</p>
+  </div>
+
+  <div class="doc-section">
+    <h2>⚙️ 4. Running the Scraper</h2>
+
+    <h3>Interactive Mode (with dashboard)</h3>
+    <pre><code>cd /path/to/golf
+export SCRAPER_LICENSE_KEY="SCRPR-XXXXXXXX-XXXXXXXX-XXXXXXXX"
+python3 main.py</code></pre>
+    <p>Starts a web dashboard at <code>http://localhost:8000</code> and runs the scrape on-schedule.</p>
+
+    <h3>Headless Mode (CSV to stdout)</h3>
+    <pre><code>cd /path/to/golf
+export SCRAPER_LICENSE_KEY="SCRPR-XXXXXXXX-XXXXXXXX-XXXXXXXX"
+python3 run_scraper.py > data.csv</code></pre>
+
+    <h3>Cron (Linux/macOS)</h3>
+    <pre><code># Run scraper daily — it will skip non-scheduled days automatically
+0 6 * * * cd /path/to/golf && SCRAPER_LICENSE_KEY="YOUR_KEY" python3 run_fast.py</code></pre>
+  </div>
+
+  <div class="doc-section">
+    <h2>🔄 5. Webhook Configuration</h2>
+    <p>To receive subscription events, configure a Stripe webhook endpoint:</p>
+    <pre><code>POST https://your-app.com/payments/webhook</code></pre>
+    <p>Listen for these events:</p>
+    <ul style="color:var(--text-muted);font-size:0.9rem;line-height:1.8">
+      <li><code>checkout.session.completed</code> — new subscription</li>
+      <li><code>invoice.paid</code> — renew license for another month</li>
+      <li><code>customer.subscription.updated</code> — plan changes</li>
+      <li><code>customer.subscription.deleted</code> — cancellation</li>
+    </ul>
+  </div>
+
+  <div class="doc-section">
+    <h2>❓ 6. Troubleshooting</h2>
+    <table class="doc-table">
+      <tr><td><strong>License server unreachable</strong></td><td>The scraper falls back to cached license data (valid for 1 hour) or free trial mode. Set <code>LICENSE_SERVER_URL</code> env var if your server isn't at localhost.</td></tr>
+      <tr><td><strong>Scraper skips when I want it to run</strong></td><td>Check today is in your tier's schedule. The scraper only runs full scrapes on scheduled days.</td></tr>
+      <tr><td><strong>How do I upgrade?</strong></td><td>Go to your Dashboard → Manage Billing. Stripe handles prorated upgrades.</td></tr>
+    </table>
+  </div>
+</section>
+
+<style>
+.docs { max-width: 700px; margin: 0 auto; padding: 40px 0; }
+.docs h1 { font-size: 2rem; margin-bottom: 4px; }
+.sub { color: var(--text-muted); margin-bottom: 40px; }
+.doc-section { margin-bottom: 32px; }
+.doc-section h2 { font-size: 1.3rem; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.doc-section h3 { font-size: 1rem; margin: 16px 0 8px; color: var(--primary); }
+.doc-section p { color: var(--text-muted); margin-bottom: 8px; line-height: 1.6; }
+.doc-section pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; overflow-x: auto; margin: 12px 0; }
+.doc-section code { font-size: 0.85rem; }
+.doc-section ul { padding-left: 20px; }
+.doc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.doc-table th, .doc-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.doc-table th { color: var(--text-muted); font-weight: 600; }
+.doc-table tr:hover { background: var(--surface); }
+</style>
+<%- include('../partials/footer') %>

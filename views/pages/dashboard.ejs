@@ -1,0 +1,145 @@
+<%- include('../partials/header') %>
+<section class="dash">
+  <% if (locals.checkout === 'success') { %><div class="alert alert-success">🎉 Subscription active! Your first scrape runs on the next scrape day.</div><% } %>
+
+  <div class="dh">
+    <h1>Dashboard</h1>
+    <p>Welcome, <%= customer.name || customer.email %></p>
+  </div>
+
+  <div class="dg">
+    <!-- License Key -->
+    <div class="dc">
+      <h3>🔑 License Key</h3>
+      <% if (license) { %>
+        <div class="lk-box"><code><%= license.key %></code></div>
+        <p class="help">Set as <code>SCRAPER_LICENSE_KEY</code> env var when running the scraper.</p>
+        <div class="status-row">
+          <span class="badge badge-<%= license.active ? 'success' : 'muted' %>"><%= license.active ? 'Active' : 'Inactive' %></span>
+        </div>
+      <% } else { %>
+        <p class="help">No active license. <a href="/pricing">Subscribe</a> to get started.</p>
+      <% } %>
+    </div>
+
+    <!-- Plan & Schedule -->
+    <div class="dc">
+      <h3>📅 Your Schedule</h3>
+      <p>Plan: <strong><%= tier.name %></strong></p>
+      <p>Data: <strong><%= tier.dataLabel %></strong></p>
+      <div class="week-days">
+        <% const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']; %>
+        <% days.forEach(d => { %>
+          <div class="wd <%= (tier.scrapeDays || []).includes(d) ? 'active' : 'dim' %>">
+            <%= d[0] %>
+          </div>
+        <% }) %>
+      </div>
+      <p class="help"><%= tier.scheduleLabel %> · <%= tier.dataLevel %> data</p>
+      <div class="next-schedule">
+        Scrapes this week: <strong><%= (tier.scrapeDays || []).length %></strong>
+      </div>
+      <% if (customer.stripe_customer_id) { %>
+        <button id="manageBilling" class="btn btn-sm btn-outline" style="margin-top:12px">Manage Billing</button>
+      <% } else { %>
+        <a href="/pricing" class="btn btn-sm btn-primary" style="margin-top:12px">Upgrade</a>
+      <% } %>
+    </div>
+
+    <!-- Features -->
+    <div class="dc">
+      <h3>✨ Included</h3>
+      <ul class="flist">
+        <% (locals.features || []).forEach(f => { %>
+          <li><%= f.value === '✓' ? '✅' : f.value %> <%= f.name %></li>
+        <% }) %>
+      </ul>
+    </div>
+
+    <!-- Usage -->
+    <div class="dc">
+      <h3>📊 Usage</h3>
+      <table class="ut">
+        <tr><td>Status</td><td><span class="badge badge-<%= customer.subscription_status === 'active' ? 'success' : 'muted' %>"><%= customer.subscription_status %></span></td></tr>
+        <tr><td>Plan</td><td><%= tier.name %></td></tr>
+        <tr><td>Scrape days</td><td><%= tier.scheduleLabel %></td></tr>
+      </table>
+    </div>
+
+    <!-- Payments -->
+    <div class="dc">
+      <h3>💰 Payments</h3>
+      <% if (locals.payments && payments.length > 0) { %>
+        <table class="ut">
+          <tr><th>Date</th><th>Amount</th><th>Status</th></tr>
+          <% payments.forEach(p => { %>
+            <tr><td><%= new Date(p.created_at).toLocaleDateString() %></td><td>$<%= (p.amount/100).toFixed(2) %></td><td><%= p.status %></td></tr>
+          <% }) %>
+        </table>
+      <% } else { %>
+        <p class="help">No payments yet. Your first month is free!</p>
+      <% } %>
+    </div>
+
+    <!-- Setup Guide -->
+    <div class="dc dc-wide">
+      <h3>🚀 Quick Start</h3>
+      <pre><code># 1. Set your license key
+export SCRAPER_LICENSE_KEY="<%= license?.key || 'YOUR_KEY' %>"
+
+# 2. Run the scraper (it will check if today is a scrape day)
+cd /path/to/golf
+python3 main.py</code></pre>
+      <p class="help">The scraper validates your license on startup and only runs full scrapes on your scheduled days.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+document.getElementById('manageBilling')?.addEventListener('click', async () => {
+  const r = await fetch('/payments/portal', { method: 'POST' });
+  const d = await r.json();
+  if (d.url) window.location.href = d.url;
+});
+</script>
+
+<style>
+.dash { padding: 24px 0; }
+.dh { margin-bottom: 24px; }
+.dh h1 { font-size: 2rem; }
+.dh p { color: var(--text-muted); }
+.dg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.dc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.dc h3 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 14px; }
+.dc-wide { grid-column: 1 / -1; }
+.lk-box { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; }
+.lk-box code { font-size: 0.85rem; word-break: break-all; }
+.status-row { margin-top: 8px; font-size: 0.85rem; color: var(--text-muted); }
+.help { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
+.week-days { display: flex; gap: 4px; margin: 10px 0; }
+.wd { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; }
+.wd.active { background: var(--primary); color: #fff; }
+.wd.dim { background: var(--surface-2); color: var(--text-muted); opacity: 0.4; }
+.next-schedule { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
+.ut { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.ut td, .ut th { padding: 6px 0; border-bottom: 1px solid var(--border); text-align: left; }
+.flist { list-style: none; }
+.flist li { padding: 4px 0; font-size: 0.85rem; }
+.badge-success { color: var(--success); }
+.badge-muted { color: var(--text-muted); }
+.dc pre { background: var(--surface-2); border-radius: var(--radius-sm); padding: 16px; overflow-x: auto; font-size: 0.8rem; }
+@media (max-width: 640px) { .dg { grid-template-columns: 1fr; } }
+
+.dash-quicklinks { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin: 24px 0; }
+.ql-card { 
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; 
+  text-decoration: none; transition: all 0.2s; display: flex; flex-direction: column; gap: 4px;
+}
+.ql-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+.ql-icon { font-size: 1.5rem; }
+.ql-title { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+.ql-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.3; }
+@media (max-width: 640px) { .dash-quicklinks { grid-template-columns: 1fr 1fr; } }
+
+</style>
+<%- include('../partials/footer') %>

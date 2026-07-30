@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bonus Scraper Pro — Automated Bonus Data Extraction</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="/" class="nav-logo">🕸️  Bonus Scraper</a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/docs">Docs</a>
+        <% if (locals.customer) { %>
+          <a href="/dashboard">Dashboard</a>
+          <a href="/sites">Sites</a>
+          <a href="/profile">Accounts</a>
+          <a href="/logout">Logout</a>
+        <% } else { %>
+          <a href="/login">Login</a>
+          <a href="/signup" class="btn btn-sm">Get Started</a>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+  <main class="container">

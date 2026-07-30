@@ -1,0 +1,174 @@
+<%- include('../partials/header') %>
+<section class="pi">
+  <div class="pi-badge">🎯 SUBSCRIPTION ACCESS</div>
+  <h1>Pick Your Plan & Period</h1>
+  <p class="pi-sub">No free tier. Your first month on Starter is free — then choose how often you scrape and how you pay.</p>
+  
+  <% if (locals.checkout === 'cancelled') { %><div class="alert alert-info">Checkout cancelled.</div><% } %>
+  <% if (locals.checkout && ['tier1','tier2','tier3'].includes(locals.checkout)) { %><div class="alert alert-info">⏳ Redirecting to checkout...</div><% } %>
+
+  <!-- Billing Period Toggle -->
+  <div class="period-toggle">
+    <button class="pt-btn active" data-period="weekly">Weekly</button>
+    <button class="pt-btn" data-period="monthly">Monthly</button>
+    <button class="pt-btn" data-period="quarterly">Quarterly</button>
+    <button class="pt-btn" data-period="annual">Annual <span class="save-badge">Save ~33%</span></button>
+  </div>
+
+  <div class="tier-grid">
+    <!-- Trial Banner -->
+    <div class="trial-banner">
+      <span class="trial-icon">🎁</span>
+      <div>
+        <strong>Free First Month on Starter</strong>
+        <p>Full access to Starter tier. Monday scrapes, Standard Data, CSV export. No card required.</p>
+      </div>
+      <a href="/signup?tier=tier1" class="btn btn-primary">Start Free Trial →</a>
+    </div>
+
+    <!-- Tier Cards with period data -->
+    <% const tiers = [
+      { id: 'tier1', name: 'Starter', tagline: 'Weekly fresh data', days: 'M', data: 'Standard', prices: { weekly: '$12', monthly: '$47', quarterly: '$120', annual: '$400' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: false },
+      { id: 'tier2', name: 'Pro', tagline: 'Three times a week', days: 'M T T S', data: 'Advanced', prices: { weekly: '$25', monthly: '$97', quarterly: '$250', annual: '$840' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: true },
+      { id: 'tier3', name: 'Elite', tagline: 'Daily data firehose', days: 'M T W T F S S', data: 'Expert', prices: { weekly: '$50', monthly: '$197', quarterly: '$500', annual: '$1,600' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: false },
+    ]; %>
+
+    <% tiers.forEach(t => { %>
+      <div class="tier-card <%= t.featured ? 'feat' : '' %> tier-<%= t.id %>" data-tier="<%= t.id %>">
+        <% if (t.featured) { %><div class="tbadge">BEST VALUE</div><% } %>
+        <div class="tc-header">
+          <h3><%= t.name %></h3>
+          <div class="tc-price">
+            <span class="price-amount"><%= t.prices.monthly %></span>
+            <small class="price-period">/mo</small>
+          </div>
+        </div>
+        <p class="tc-tagline"><%= t.tagline %></p>
+        <div class="tc-data"><%= t.data %> Data</div>
+        <ul>
+          <li>✓ <%= t.id === 'tier1' ? '1' : t.id === 'tier2' ? '3' : '7' %> scrapes per week</li>
+          <li>✓ <%= t.data %> data export</li>
+          <li>✓ <%= t.id === 'tier1' ? 'CSV' : t.id === 'tier2' ? 'CSV + JSON' : 'All formats' %></li>
+          <% if (t.id !== 'tier1') { %><li>✓ Value scoring & filters</li><% } %>
+          <% if (t.id === 'tier3') { %><li>✓ Full-text search</li><li>✓ Raw data access</li><li>✓ Priority support</li><% } %>
+        </ul>
+        <a href="/signup?tier=<%= t.id %>" class="btn <%= t.featured ? 'btn-primary' : 'btn-outline' %> btn-block ct-btn" data-tier="<%= t.id %>">
+          Subscribe <span class="price-amount"><%= t.prices.monthly %></span><span class="price-period">/mo</span>
+        </a>
+      </div>
+    <% }) %>
+  </div>
+
+  <!-- Scaling Factor Reference -->
+  <div class="pricing-reference">
+    <h3>📊 Pricing Reference</h3>
+    <p>How the periods scale — choose what fits your budget and commitment level.</p>
+    <table class="pr-table">
+      <tr><th>Period</th><th>Starter</th><th>Pro</th><th>Elite</th><th>vs Monthly</th></tr>
+      <tr><td>Weekly</td><td>$12/wk ($48/mo)</td><td>$25/wk ($100/mo)</td><td>$50/wk ($200/mo)</td><td>~2% more</td></tr>
+      <tr><td>Monthly</td><td>$47/mo</td><td>$97/mo</td><td>$197/mo</td><td>—</td></tr>
+      <tr><td>Quarterly</td><td>$120/qtr ($40/mo)</td><td>$250/qtr ($83/mo)</td><td>$500/qtr ($167/mo)</td><td>~15% less</td></tr>
+      <tr><td>Annual</td><td>$400/yr ($33/mo)</td><td>$840/yr ($70/mo)</td><td>$1,600/yr ($133/mo)</td><td>~33% less</td></tr>
+    </table>
+  </div>
+
+  <div class="pi-footer">
+    <p>All plans include a <strong>free first month on Starter</strong>. Cancel anytime.</p>
+  </div>
+</section>
+
+<script>
+// Period toggle
+document.querySelectorAll('.pt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pt-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const period = btn.dataset.period;
+    
+    document.querySelectorAll('.tier-card').forEach(card => {
+      const tier = card.dataset.tier;
+      const prices = <%= JSON.stringify({ tier1: { weekly: '$12', monthly: '$47', quarterly: '$120', annual: '$400' }, tier2: { weekly: '$25', monthly: '$97', quarterly: '$250', annual: '$840' }, tier3: { weekly: '$50', monthly: '$197', quarterly: '$500', annual: '$1,600' } }) %>;
+      const perLabels = { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' };
+      
+      card.querySelector('.price-amount').textContent = prices[tier][period];
+      card.querySelectorAll('.price-period').forEach(el => el.textContent = perLabels[period]);
+    });
+  });
+});
+
+// Auto-checkout
+(async function() {
+  const tier = '<%= typeof locals.checkout === "string" && ["tier1","tier2","tier3"].includes(locals.checkout) ? locals.checkout : "" %>';
+  if (tier && <%= !!locals.customer %>) {
+    try {
+      const r = await fetch('/payments/checkout/' + tier, { method: 'POST' });
+      const d = await r.json();
+      if (d.url) window.location.href = d.url;
+    } catch(err) { console.error(err); }
+  }
+})();
+
+document.querySelectorAll('.ct-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    <% if (locals.customer) { %>
+      e.preventDefault();
+      btn.textContent = 'Redirecting...'; btn.disabled = true;
+      try {
+        const r = await fetch('/payments/checkout/' + btn.dataset.tier, { method: 'POST' });
+        const d = await r.json();
+        if (d.url) window.location.href = d.url;
+        else alert('Error: ' + (d.error || 'Unknown'));
+      } catch(err) { alert('Checkout failed: ' + err.message); btn.disabled = false; }
+    <% } %>
+  });
+});
+</script>
+
+<style>
+.pi { padding: 60px 0; text-align: center; }
+.pi-badge { display: inline-block; background: var(--primary); color: #fff; padding: 4px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px; }
+.pi h1 { font-size: 2.4rem; margin-bottom: 6px; }
+.pi-sub { color: var(--text-muted); margin-bottom: 24px; max-width: 550px; margin-left: auto; margin-right: auto; }
+
+/* Period Toggle */
+.period-toggle { display: flex; gap: 8px; justify-content: center; margin-bottom: 32px; flex-wrap: wrap; }
+.pt-btn { padding: 10px 24px; border: 2px solid var(--border); border-radius: 30px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; }
+.pt-btn:hover { border-color: var(--primary); color: var(--text); }
+.pt-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.save-badge { background: #2ecc71; color: #fff; font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; margin-left: 4px; font-weight: 700; vertical-align: middle; }
+
+.tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 960px; margin: 0 auto; }
+.trial-banner { grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; background: linear-gradient(135deg, rgba(108,92,231,0.15), rgba(0,214,143,0.1)); border: 1px solid var(--primary); border-radius: var(--radius); padding: 20px 24px; text-align: left; }
+.trial-icon { font-size: 2.5rem; }
+.trial-banner strong { font-size: 1.1rem; }
+.trial-banner p { font-size: 0.85rem; color: var(--text-muted); }
+.trial-banner .btn { margin-left: auto; flex-shrink: 0; }
+
+.tier-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 20px; text-align: center; position: relative; transition: all 0.3s; display: flex; flex-direction: column; }
+.tier-card:hover { transform: translateY(-3px); }
+.tier-card.feat { border-color: var(--primary); }
+.tbadge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+.tc-header { margin-bottom: 8px; }
+.tc-header h3 { font-size: 1.3rem; }
+.tc-price { font-size: 2.5rem; font-weight: 700; }
+.tc-price small { font-size: 0.85rem; color: var(--text-muted); font-weight: 400; }
+.tc-tagline { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; }
+.tc-data { font-size: 0.85rem; font-weight: 600; margin-bottom: 16px; padding: 4px 12px; background: var(--surface-2); border-radius: 20px; display: inline-block; }
+.tier-card ul { list-style: none; text-align: left; margin: 16px 0 24px; flex: 1; }
+.tier-card ul li { padding: 5px 0; font-size: 0.85rem; color: var(--text-muted); }
+.btn-block { width: 100%; }
+
+.pricing-reference { max-width: 700px; margin: 40px auto; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); text-align: left; }
+.pricing-reference h3 { margin-bottom: 6px; }
+.pricing-reference p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px; }
+.pr-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.pr-table th, .pr-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+.pr-table th { color: var(--text-muted); font-weight: 600; }
+.pr-table tr:hover { background: var(--surface-2); }
+
+.pi-footer { margin-top: 32px; padding: 20px; border-top: 1px solid var(--border); max-width: 500px; margin-left: auto; margin-right: auto; }
+.pi-footer p { font-size: 0.9rem; color: var(--text-muted); }
+
+@media (max-width: 800px) { .tier-grid { grid-template-columns: 1fr; max-width: 400px; } .trial-banner { flex-direction: column; text-align: center; } .trial-banner .btn { margin: 0; } }
+</style>
+<%- include('../partials/footer') %>

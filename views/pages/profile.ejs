@@ -1,0 +1,114 @@
+<%- include('../partials/header') %>
+<section class="dash">
+  <div class="dh">
+    <h1>🔐 Casino Accounts</h1>
+    <p>Manage your casino login credentials. These are used by the scraper to log in and extract bonus data.</p>
+  </div>
+
+  <% if (locals.saved) { %><div class="alert alert-success">✅ Casino accounts saved!</div><% } %>
+
+  <form method="POST" action="/profile">
+    <div class="dc" style="margin-bottom:20px">
+      <h3>🎰 Your Casino Credentials</h3>
+      <p class="help">Add the phone numbers and passwords you use at these casinos. The scraper will rotate through them.</p>
+      
+      <div id="accounts-container">
+        <% (locals.casinoAccounts || []).forEach((acct, i) => { %>
+          <div class="acct-row" data-id="<%= acct.id %>">
+            <div class="acct-fields">
+              <div class="fg">
+                <label>Label</label>
+                <input type="text" name="label[]" value="<%= acct.label %>" placeholder="e.g. Account 1">
+              </div>
+              <div class="fg">
+                <label>Username (Phone)</label>
+                <input type="text" name="username[]" value="<%= acct.username %>" placeholder="614XXXXXXXX" required>
+              </div>
+              <div class="fg">
+                <label>Password</label>
+                <input type="password" name="password[]" value="<%= acct.password %>" placeholder="••••••••">
+              </div>
+            </div>
+            <button type="submit" formaction="/profile/delete-account/<%= acct.id %>" class="btn btn-sm btn-danger" style="margin-top:8px">Remove</button>
+          </div>
+        <% }) %>
+        
+        <!-- Empty template for new accounts -->
+        <div class="acct-row template" style="display:none">
+          <div class="acct-fields">
+            <div class="fg">
+              <label>Label</label>
+              <input type="text" name="label[]" placeholder="e.g. Account 2">
+            </div>
+            <div class="fg">
+              <label>Username (Phone)</label>
+              <input type="text" name="username[]" placeholder="614XXXXXXXX">
+            </div>
+            <div class="fg">
+              <label>Password</label>
+              <input type="password" name="password[]" placeholder="••••••••">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <button type="button" id="addAccount" class="btn btn-outline btn-sm" style="margin-top:8px">+ Add Another Account</button>
+    </div>
+
+    <div class="dc" style="margin-bottom:20px">
+      <h3>🌐 Active Sites</h3>
+      <p class="help">Sites you've enabled for scraping. Visit the <a href="/sites">Sites page</a> to manage your full list.</p>
+      <% if (locals.enabledSites && enabledSites.length > 0) { %>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+          <% enabledSites.forEach(s => { %>
+            <span class="site-chip"><%= s.name || s.url %></span>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p class="help" style="margin-top:8px">No sites enabled yet. <a href="/sites">Browse and enable sites →</a></p>
+      <% } %>
+    </div>
+
+    <button type="submit" class="btn btn-primary">💾 Save All Accounts</button>
+  </form>
+</section>
+
+<script>
+document.getElementById('addAccount')?.addEventListener('click', () => {
+  const template = document.querySelector('.acct-row.template');
+  const clone = template.cloneNode(true);
+  clone.style.display = '';
+  clone.classList.remove('template');
+  document.getElementById('accounts-container').appendChild(clone);
+});
+</script>
+
+<style>
+.acct-row { 
+  background: var(--surface-2); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-sm); 
+  padding: 16px; 
+  margin-bottom: 12px; 
+}
+.acct-fields { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr 1fr; 
+  gap: 12px; 
+}
+.acct-fields .fg { margin-bottom: 0; }
+.acct-fields label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 2px; }
+.acct-fields input { width: 100%; padding: 8px 10px; font-size: 0.85rem; }
+.btn-danger { background: #e74c3c; color: #fff; border: none; }
+.btn-danger:hover { background: #c0392b; }
+.site-chip { 
+  background: var(--surface-2); 
+  border: 1px solid var(--border); 
+  border-radius: 20px; 
+  padding: 4px 14px; 
+  font-size: 0.75rem; 
+  color: var(--text-muted); 
+}
+@media (max-width: 640px) { .acct-fields { grid-template-columns: 1fr; } }
+</style>
+<%- include('../partials/footer') %>

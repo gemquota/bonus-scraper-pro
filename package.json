@@ -1,0 +1,26 @@
+{
+  "name": "make-me-money",
+  "version": "1.0.0",
+  "description": "Bonus Scraper Pro — Subscription & License Management for the Golf Scraper Engine",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node src/index.js & sleep 3 && curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/ && kill %1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "sql.js": "^1.14.1",
+    "stripe": "^22.4.0"
+  }
+}
