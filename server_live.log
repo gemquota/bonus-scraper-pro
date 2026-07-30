@@ -1,0 +1,15 @@
+◇ injected env (17) from .env // tip: ⌘ enable debugging { debug: true }
+  📦 Schema v3: detailed site fields
+
+╔══════════════════════════════════════════╗
+║  🕸️  Bonus Scraper Pro                   ║
+║  Subscription & License Management       ║
+╚══════════════════════════════════════════╝
+
+  📍 http://localhost:3000
+  💰 Stripe: ⚠️  Not configured
+
+  🔑 License API:       POST /api/license/validate
+  📊 Stripe Webhook:    POST /payments/webhook
+  📖 Docs:              /docs
+

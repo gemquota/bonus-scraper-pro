@@ -61,15 +61,54 @@
 
   <!-- Scaling Factor Reference -->
   <div class="pricing-reference">
-    <h3>📊 Pricing Reference</h3>
-    <p>How the periods scale — choose what fits your budget and commitment level.</p>
+    <h3>📊 All Periods — Tiers x Commitment</h3>
+    <p>Tiers as rows, periods as columns. Pick your commitment level.</p>
     <table class="pr-table">
-      <tr><th>Period</th><th>Starter</th><th>Pro</th><th>Elite</th><th>vs Monthly</th></tr>
-      <tr><td>Weekly</td><td>$12/wk ($48/mo)</td><td>$25/wk ($100/mo)</td><td>$50/wk ($200/mo)</td><td>~2% more</td></tr>
-      <tr><td>Monthly</td><td>$47/mo</td><td>$97/mo</td><td>$197/mo</td><td>—</td></tr>
-      <tr><td>Quarterly</td><td>$120/qtr ($40/mo)</td><td>$250/qtr ($83/mo)</td><td>$500/qtr ($167/mo)</td><td>~15% less</td></tr>
-      <tr><td>Annual</td><td>$400/yr ($33/mo)</td><td>$840/yr ($70/mo)</td><td>$1,600/yr ($133/mo)</td><td>~33% less</td></tr>
+      <tr><th>Tier</th><th>Weekly</th><th>Monthly</th><th>Quarterly</th><th>Annual</th><th>Best For</th></tr>
+      <tr>
+        <td><strong>Starter</strong></td>
+        <td>$12/wk</td>
+        <td><strong>$47/mo</strong> <span class="rec-badge">FREE MONTH</span></td>
+        <td>$120/qtr</td>
+        <td>$400/yr</td>
+        <td>Casual, testing the waters</td>
+      </tr>
+      <tr>
+        <td><strong>Pro</strong></td>
+        <td>$25/wk</td>
+        <td><strong>$97/mo</strong> <span class="rec-badge">POPULAR</span></td>
+        <td>$250/qtr</td>
+        <td>$840/yr</td>
+        <td>Regular, best value/scrape</td>
+      </tr>
+      <tr>
+        <td><strong>Elite</strong></td>
+        <td>$50/wk</td>
+        <td><strong>$197/mo</strong></td>
+        <td>$500/qtr</td>
+        <td>$1,600/yr</td>
+        <td>Power users, daily data</td>
+      </tr>
+      <tr style="color:var(--text-muted);font-size:0.8rem">
+        <td><strong>Save vs Monthly</strong></td>
+        <td>~2% more</td>
+        <td>—</td>
+        <td>~15%</td>
+        <td>~33%</td>
+        <td></td>
+      </tr>
     </table>
+    <div style="margin-top:16px;font-size:0.8rem;color:var(--text-muted);text-align:left;line-height:1.8">
+      <p><strong>Why these prices?</strong></p>
+      <ul style="padding-left:20px">
+        <li><strong>$47 Starter</strong> — Below $50 psychological barrier. 1 scrape/week (~$12/scrape) cheaper than manual work.</li>
+        <li><strong>$97 Pro</strong> — Just under $100. $50 more for 3x frequency + Advanced data (value scoring alone justifies it).</li>
+        <li><strong>$197 Elite</strong> — Under $200. Daily data + auto-registration saves hours of manual signup work.</li>
+        <li><strong>Weekly</strong> — Slight premium for flexibility. Good for short evaluation.</li>
+        <li><strong>Quarterly</strong> — 15% discount. Sweet spot between commitment and flexibility.</li>
+        <li><strong>Annual</strong> — 33% discount. Best lifetime value, lowest churn.</li>
+      </ul>
+    </div>
   </div>
 
   <div class="pi-footer">
@@ -165,6 +204,7 @@ document.querySelectorAll('.ct-btn').forEach(btn => {
 .pr-table th, .pr-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
 .pr-table th { color: var(--text-muted); font-weight: 600; }
 .pr-table tr:hover { background: var(--surface-2); }
+.rec-badge { background: #2ecc71; color: #fff; font-size: 0.6rem; padding: 2px 8px; border-radius: 10px; font-weight: 700; margin-left: 4px; vertical-align: middle; }
 
 .pi-footer { margin-top: 32px; padding: 20px; border-top: 1px solid var(--border); max-width: 500px; margin-left: auto; margin-right: auto; }
 .pi-footer p { font-size: 0.9rem; color: var(--text-muted); }
