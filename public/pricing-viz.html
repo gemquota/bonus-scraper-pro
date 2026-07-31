@@ -91,6 +91,15 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 .chip.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 .variant-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.45; }
 .variant-desc strong { color: var(--text); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; }
+.tab { padding: 9px 16px; border: 1px solid transparent; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); cursor: pointer; font-size: 0.85rem; font-weight: 600; border-radius: 8px 8px 0 0; transition: all 0.15s; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--text); background: var(--surface-2); border-color: var(--border); border-bottom-color: var(--blue); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.val-input { width: 92px; padding: 4px 8px; background: var(--bg); color: var(--text); border: 1px solid var(--blue); border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
 .formula-out { margin-top: 12px; font-size: 0.85rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
 .formula-out .fo-label { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
 .plane-wrap { margin-top: 14px; }
@@ -116,35 +125,42 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
   <h1>📊 Pricing Visualizer</h1>
   <p class="sub">Enter the 12 prices — tables and charts update live. Values persist in the URL.</p>
 
-  <!-- Pricing variants -->
+  <!-- Pricing controls -->
   <div class="card">
-    <h2>Pricing Variants <span class="snap-badge">20 STRATEGIES</span></h2>
-    <p class="sub" style="margin-bottom:14px">One-click load of the 20 variant pricing structures. Pick one, then fine-tune with the sliders or the grid below.</p>
-    <div class="variant-chips" id="variantChips"></div>
-    <div class="variant-desc" id="variantDesc"></div>
-  </div>
-
-  <!-- Formula builder -->
-  <div class="card">
-    <h2>Formula Builder <span class="snap-badge">SHAPES THE PRICING FUNCTION</span></h2>
-    <p class="sub" style="margin-bottom:14px">Control the function behind the prices — the base monthly price, how much each tier costs relative to the one below, and how Weekly / Quarterly / Annual scale from Monthly. Resulting prices snap to whole dollars.</p>
-    <div class="seg" id="formulaModeSeg" style="margin-bottom:14px">
-      <button class="active" data-mode="advanced">Advanced · 9 Sliders</button>
-      <button data-mode="simple">Simple · X/Y Curve</button>
+    <h2>Pricing Controls</h2>
+    <div class="tabs" id="controlTabs">
+      <button class="tab active" data-tab="variants">Variants</button>
+      <button class="tab" data-tab="sliders">Quick-Set Sliders</button>
+      <button class="tab" data-tab="adv">Formula · Per-Tier</button>
+      <button class="tab" data-tab="simple">Formula · X/Y</button>
     </div>
-    <div class="slider-grid" id="formulaGrid"></div>
-    <div class="formula-out" id="formulaOut"></div>
-    <div class="plane-wrap" id="planeWrap" hidden>
-      <div class="fo-label" style="margin-bottom:6px">Price trapezoid — X = tier (left → right), Y = price. Top edge = annual, bottom edge = weekly, sides = Brokeass &amp; Friend period spreads. Drag X/Y to reshape the outline.</div>
-      <canvas id="planeCanvas"></canvas>
-    </div>
-  </div>
 
-  <!-- Quick-set sliders -->
-  <div class="card">
-    <h2>Quick-Set Sliders <span class="snap-badge">SNAP TO WHOLE $</span></h2>
-    <p class="sub" style="margin-bottom:14px">Drag to set each tier's monthly price — Weekly, Quarterly and Annual are derived automatically and snapped to whole dollars. Fine-tune any value in the grid below.</p>
-    <div class="slider-grid" id="sliderGrid"></div>
+    <div class="tab-panel active" id="panel-variants">
+      <p class="sub" style="margin-bottom:14px">One-click load of the 20 variant pricing structures. Pick one, then fine-tune in any other tab.</p>
+      <div class="variant-chips" id="variantChips"></div>
+      <div class="variant-desc" id="variantDesc"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-sliders">
+      <p class="sub" style="margin-bottom:14px">Drag to set each tier's monthly price — Weekly, Quarterly and Annual are derived automatically and snapped to whole dollars. Tap any value to type one in.</p>
+      <div class="slider-grid" id="sliderGrid"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-adv">
+      <p class="sub" style="margin-bottom:14px">Per-transition control of the pricing function: base monthly price, each tier-to-tier growth step, and the Weekly / Quarterly / Annual ratios. Tap any value to type one in.</p>
+      <div class="slider-grid" id="formulaGrid"></div>
+      <div class="formula-out" id="formulaOut"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-simple">
+      <p class="sub" style="margin-bottom:14px">Two sliders shape the whole pricing function — X = tier curve, Y = period curve. The trapezoid shows the outline live. Tap any value to type one in.</p>
+      <div class="slider-grid" id="formulaGridSimple"></div>
+      <div class="formula-out" id="formulaOutSimple"></div>
+      <div class="plane-wrap" id="planeWrap">
+        <div class="fo-label" style="margin-bottom:6px">Price trapezoid — X = tier (left → right), Y = price. Top edge = annual, bottom edge = weekly, sides = Brokeass &amp; Friend period spreads.</div>
+        <canvas id="planeCanvas"></canvas>
+      </div>
+    </div>
   </div>
 
   <!-- Inputs -->
@@ -485,8 +501,59 @@ function periodFactors() {
   return { wk: formula.fWk / 100, qtr: formula.fQtr, yr: formula.fYr };
 }
 
+function snapStep(v, step) {
+  if (step === 0.1) return Math.round(v * 10) / 10;
+  if (step === 0.5) return Math.round(v * 2) / 2;
+  return Math.round(v / step) * step;
+}
+function editableValue(span, opts) {
+  span.style.cursor = 'pointer';
+  span.title = 'Click to type a value';
+  span.addEventListener('click', () => {
+    if (span.querySelector('input')) return;
+    const cur = opts.get();
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.min = opts.min; inp.max = opts.max; inp.step = opts.step;
+    inp.value = cur;
+    inp.className = 'val-input';
+    span.textContent = '';
+    span.appendChild(inp);
+    inp.focus(); inp.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      if (commit) {
+        let v = parseFloat(inp.value);
+        if (isNaN(v)) v = cur;
+        v = snapStep(Math.max(opts.min, Math.min(opts.max, v)), opts.step);
+        opts.commit(v);
+        span.textContent = opts.fmt(v);
+        if (opts.sync) opts.sync(v);
+      } else {
+        span.textContent = opts.fmt(cur);
+      }
+    };
+    inp.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') finish(true);
+      if (ev.key === 'Escape') finish(false);
+      ev.stopPropagation();
+    });
+    inp.addEventListener('blur', () => finish(true));
+  });
+}
+
+function formulaGridEl() {
+  return document.getElementById(formulaMode === 'simple' ? 'formulaGridSimple' : 'formulaGrid');
+}
+function formulaOutEl() {
+  return document.getElementById(formulaMode === 'simple' ? 'formulaOutSimple' : 'formulaOut');
+}
+
 function renderFormulaSliders() {
-  const wrap = document.getElementById('formulaGrid');
+  const wrap = formulaGridEl();
+  if (!wrap) return;
   wrap.innerHTML = '';
   formulaConfig().forEach(cfg => {
     const block = document.createElement('div');
@@ -501,19 +568,25 @@ function renderFormulaSliders() {
       document.getElementById('fval-' + cfg.id).textContent = cfg.fmt(formula[cfg.id]);
       applyFormula();
     });
+    editableValue(document.getElementById('fval-' + cfg.id), {
+      min: cfg.min, max: cfg.max, step: cfg.step,
+      get: () => formula[cfg.id],
+      fmt: cfg.fmt,
+      commit: v => { formula[cfg.id] = v; applyFormula(); },
+      sync: v => { const el = document.getElementById('fslider-' + cfg.id); if (el) el.value = v; },
+    });
   });
   updateFormulaOut();
 }
 
-function setFormulaMode(mode, regen) {
-  formulaMode = mode;
-  document.querySelectorAll('#formulaModeSeg button').forEach(b => {
-    b.className = b.dataset.mode === mode ? 'active' : '';
+function setTab(tab) {
+  document.querySelectorAll('#controlTabs .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  ['variants', 'sliders', 'adv', 'simple'].forEach(t => {
+    const p = document.getElementById('panel-' + t);
+    if (p) p.classList.toggle('active', t === tab);
   });
-  document.getElementById('planeWrap').hidden = mode !== 'simple';
-  renderFormulaSliders();
-  if (regen !== false) applyFormula();
-  if (mode === 'simple') renderTrapezoid();
+  if (tab === 'adv') { formulaMode = 'advanced'; renderFormulaSliders(); }
+  if (tab === 'simple') { formulaMode = 'simple'; renderFormulaSliders(); renderTrapezoid(); }
 }
 
 function syncFormulaFromValues() {
@@ -561,7 +634,7 @@ function applyFormula() {
 }
 
 function updateFormulaOut() {
-  const out = document.getElementById('formulaOut');
+  const out = formulaOutEl();
   if (!out) return;
   const ms = computeMonthly();
   const pf = periodFactors();
@@ -714,6 +787,13 @@ function renderSliders() {
     wrap.appendChild(block);
     document.getElementById('slider-' + cfg.tier).addEventListener('input', (e) => {
       applySlider(cfg.tier, parseInt(e.target.value, 10));
+    });
+    editableValue(document.getElementById('slider-val-' + cfg.tier), {
+      min: 1, max: cfg.max, step: 1,
+      get: () => values[cfg.tier].monthly,
+      fmt: v => '$' + v,
+      commit: v => applySlider(cfg.tier, v),
+      sync: v => { const el = document.getElementById('slider-' + cfg.tier); if (el) el.value = v; },
     });
   });
 }
@@ -1477,12 +1557,12 @@ function renderAll() {
 loadState();
 renderInputs();
 renderSliders();
-document.querySelectorAll('#formulaModeSeg button').forEach(b => {
-  b.addEventListener('click', () => setFormulaMode(b.dataset.mode));
+document.querySelectorAll('#controlTabs .tab').forEach(b => {
+  b.addEventListener('click', () => setTab(b.dataset.tab));
 });
 renderFormulaSliders();
 syncFormulaFromValues();
-setFormulaMode('advanced', false);
+setTab('variants');
 renderVariants();
 renderLegend();
 renderAll();
