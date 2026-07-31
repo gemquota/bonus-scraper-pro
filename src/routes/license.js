@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { getTier, getScrapeDays } = require('../tiers');
+const { getTier, getScrapeDays, getFeatureList } = require('../tiers');
 const fs = require('fs');
 const path = require('path');
 
@@ -17,7 +17,6 @@ function writeGolfLicense(data) {
   } catch { return false; }
 }
 
-// POST /api/license/validate — called by the Python scraper
 router.post('/validate', (req, res) => {
   const { license_key } = req.body;
   
@@ -44,22 +43,13 @@ router.post('/validate', (req, res) => {
   `).get(license_key);
   
   if (!license) {
-    return res.json({
-      valid: false,
-      tier: 'trial',
-      error: 'Invalid or expired license key',
-    });
+    return res.json({ valid: false, tier: 'trial', error: 'Invalid or expired license key' });
   }
   
   if (license.subscription_status !== 'active') {
-    return res.json({
-      valid: false,
-      tier: 'trial',
-      error: 'Subscription not active. Please renew.',
-    });
+    return res.json({ valid: false, tier: 'trial', error: 'Subscription not active. Please renew.' });
   }
   
-  // Check expiry
   if (license.expires_at && new Date(license.expires_at) < new Date()) {
     db.run('UPDATE licenses SET active = 0 WHERE id = ?', [license.id]);
     return res.json({ valid: false, tier: 'trial', error: 'License expired' });
@@ -71,17 +61,15 @@ router.post('/validate', (req, res) => {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
   const scrapesToday = scrapeDays.includes(today);
   
-  // Record validation
   db.run('INSERT INTO usage_log (license_id, api_calls) VALUES (?, 1)', [license.id]);
   
-  // Auto-write license to golf project
   writeGolfLicense({
     valid: true,
     key: license_key,
     tier: license.tier,
     tierName: tierConfig.name,
     scrapeDays,
-    dataLevel: 'expert',
+    dataLevel: tierConfig.dataLevel,
     features,
     customerEmail: license.email,
     scrapesToday,
@@ -89,9 +77,8 @@ router.post('/validate', (req, res) => {
     expiresAt: license.expires_at,
   });
   
-  console.log(`🔑 License validated: ${license.tier} — ${license.email} (${scrapesToday ? 'scraping today ✓' : 'no scrape today'})`);
+  console.log(`🔑 License validated: ${tierConfig.name} — ${license.email} (${scrapesToday ? 'scraping today ✓' : 'no scrape today'})`);
   
-  // Get customer's casino credentials and enabled sites
   let casino_credentials = [];
   let enabled_sites = [];
   try {
@@ -111,7 +98,7 @@ router.post('/validate', (req, res) => {
     tier: license.tier,
     tier_name: tierConfig.name,
     scrape_days: scrapeDays,
-    data_level: 'expert',
+    data_level: tierConfig.dataLevel,
     data_label: tierConfig.dataLabel,
     schedule_label: tierConfig.scheduleLabel,
     scrape_today: scrapesToday,
@@ -124,7 +111,6 @@ router.post('/validate', (req, res) => {
   });
 });
 
-// GET /api/license/status — quick check
 router.get('/status', (req, res) => {
   const key = req.query.key;
   if (!key) return res.json({ valid: false });
@@ -143,15 +129,16 @@ router.get('/status', (req, res) => {
   });
 });
 
-// GET /api/license/features/:tier
 router.get('/features/:tier', (req, res) => {
   const tier = getTier(req.params.tier);
   res.json({
     tier: req.params.tier,
     name: tier.name,
+    price: tier.price,
     scrapeDays: tier.scrapeDays,
     dataLevel: tier.dataLevel,
     scheduleLabel: tier.scheduleLabel,
+    features: getFeatureList(req.params.tier),
   });
 });
 

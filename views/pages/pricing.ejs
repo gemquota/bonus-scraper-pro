@@ -1,8 +1,8 @@
 <%- include('../partials/header') %>
 <section class="pi">
   <div class="pi-badge">🎯 BONUS SCRAPER PRO</div>
-  <h1>One Plan. Any Schedule.</h1>
-  <p class="pi-sub">Full access to all sites, all data levels. Pick how often you pay. Free first month on monthly.</p>
+  <h1>Choose Your Tier & Period</h1>
+  <p class="pi-sub">Free first month on Starter monthly. No free tier beyond that — pick your scraping schedule.</p>
 
   <% if (locals.checkout === 'cancelled') { %><div class="alert alert-info">Checkout cancelled.</div><% } %>
 
@@ -13,51 +13,109 @@
     <button class="pt-btn" data-period="annual">Annual</button>
   </div>
 
-  <div class="plan-card" id="plan-card">
-    <div class="pc-header">
-      <div class="pc-name">Full Access</div>
-      <div class="pc-price">
-        <span class="price-amount" id="price-amount">$6</span>
-        <small class="price-period" id="price-period">/wk</small>
+  <div class="tp-grid">
+    <!-- Starter -->
+    <div class="tp-card">
+      <h3>Starter</h3>
+      <div class="tp-price">
+        <span class="price-amount" data-tier="tier1">$6</span>
+        <small class="price-period">/wk</small>
       </div>
+      <div class="tp-days">
+        <span class="d active">M</span><span class="d">T</span><span class="d">W</span><span class="d">T</span><span class="d">F</span><span class="d">S</span><span class="d">S</span>
+      </div>
+      <p>Monday scrape · Standard Data</p>
+      <ul class="tp-features">
+        <li>✓ CSV Export</li>
+        <li>✕ JSON Export</li>
+        <li>✕ Value Scoring</li>
+        <li>✕ Full-Text Search</li>
+        <li>✕ Auto-Registration</li>
+      </ul>
+      <% if (locals.customer) { %>
+        <button class="btn btn-primary btn-block" onclick="checkout('tier1')">
+          Subscribe <span class="price-amount" data-tier="tier1">$6</span><span class="price-period">/wk</span>
+        </button>
+      <% } else { %>
+        <a href="/signup?tier=tier1" class="btn btn-primary btn-block">Choose Starter</a>
+      <% } %>
+      <p class="tp-trial">Free first month</p>
     </div>
-    <p class="pc-desc">All features. All data levels. All sites. No limits.</p>
-    <div class="pc-features">
-      <div class="pcf-row"><span>✓ All casino sites</span><span class="pcf-val">1,000+</span></div>
-      <div class="pcf-row"><span>✓ Scrape schedule</span><span class="pcf-val">Daily</span></div>
-      <div class="pcf-row"><span>✓ Data level</span><span class="pcf-val">Expert</span></div>
-      <div class="pcf-row"><span>✓ Export formats</span><span class="pcf-val">CSV + JSON + Raw</span></div>
-      <div class="pcf-row"><span>✓ Value scoring</span><span class="pcf-val">Included</span></div>
-      <div class="pcf-row"><span>✓ Full-text search</span><span class="pcf-val">Included</span></div>
-      <div class="pcf-row"><span>✓ Auto-registration</span><span class="pcf-val">Included</span></div>
-      <div class="pcf-row"><span>✓ Priority support</span><span class="pcf-val">Included</span></div>
+
+    <!-- Pro -->
+    <div class="tp-card feat">
+      <div class="tp-badge">POPULAR</div>
+      <h3>Pro</h3>
+      <div class="tp-price">
+        <span class="price-amount" data-tier="tier2">$12</span>
+        <small class="price-period">/wk</small>
+      </div>
+      <div class="tp-days">
+        <span class="d active">M</span><span class="d">T</span><span class="d">W</span><span class="d active">T</span><span class="d">F</span><span class="d active">S</span><span class="d">S</span>
+      </div>
+      <p>Mon + Thu + Sat · Advanced Data</p>
+      <ul class="tp-features">
+        <li>✓ CSV Export</li>
+        <li>✓ JSON Export</li>
+        <li>✓ Value Scoring</li>
+        <li>✕ Full-Text Search</li>
+        <li>✕ Auto-Registration</li>
+      </ul>
+      <% if (locals.customer) { %>
+        <button class="btn btn-primary btn-block" onclick="checkout('tier2')">
+          Subscribe <span class="price-amount" data-tier="tier2">$12</span><span class="price-period">/wk</span>
+        </button>
+      <% } else { %>
+        <a href="/signup?tier=tier2" class="btn btn-primary btn-block">Choose Pro</a>
+      <% } %>
     </div>
-    <% if (locals.customer) { %>
-      <button class="btn btn-primary btn-block pc-btn" id="subscribe-btn">
-        Subscribe <span class="price-amount">$6</span><span class="price-period">/wk</span>
-      </button>
-    <% } else { %>
-      <a href="/signup" class="btn btn-primary btn-block pc-btn">
-        Start Free Trial — <span class="price-amount">$6</span><span class="price-period">/wk</span>
-      </a>
-    <% } %>
-    <p class="pc-trial">Free first month on the monthly plan. Cancel anytime.</p>
+
+    <!-- Elite -->
+    <div class="tp-card">
+      <h3>Elite</h3>
+      <div class="tp-price">
+        <span class="price-amount" data-tier="tier3">$24</span>
+        <small class="price-period">/wk</small>
+      </div>
+      <div class="tp-days">
+        <span class="d active">M</span><span class="d active">T</span><span class="d active">W</span><span class="d active">T</span><span class="d active">F</span><span class="d active">S</span><span class="d active">S</span>
+      </div>
+      <p>Daily · Expert Data</p>
+      <ul class="tp-features">
+        <li>✓ CSV Export</li>
+        <li>✓ JSON Export</li>
+        <li>✓ Value Scoring</li>
+        <li>✓ Full-Text Search</li>
+        <li>✓ Auto-Registration</li>
+      </ul>
+      <% if (locals.customer) { %>
+        <button class="btn btn-primary btn-block" onclick="checkout('tier3')">
+          Subscribe <span class="price-amount" data-tier="tier3">$24</span><span class="price-period">/wk</span>
+        </button>
+      <% } else { %>
+        <a href="/signup?tier=tier3" class="btn btn-primary btn-block">Choose Elite</a>
+      <% } %>
+    </div>
   </div>
 
   <div class="pricing-reference">
-    <h3>📊 Price Comparison</h3>
+    <h3>📊 Period Comparison</h3>
     <table class="pr-table">
-      <tr><th>Period</th><th>Price</th><th>Effective /mo</th></tr>
-      <tr><td>Weekly</td><td>$6/wk</td><td>$26/mo</td></tr>
-      <tr><td>Monthly</td><td>$20/mo</td><td>$20/mo</td></tr>
-      <tr><td>Quarterly</td><td>$50/qtr</td><td>$17/mo</td></tr>
-      <tr><td>Annual</td><td>$180/yr</td><td>$15/mo</td></tr>
+      <tr><th>Period</th><th>Starter</th><th>Pro</th><th>Elite</th></tr>
+      <tr><td>Weekly</td><td>$6/wk</td><td>$12/wk</td><td>$24/wk</td></tr>
+      <tr><td>Monthly</td><td>$20/mo</td><td>$35/mo</td><td>$70/mo</td></tr>
+      <tr><td>Quarterly</td><td>$50/qtr</td><td>$90/qtr</td><td>$180/qtr</td></tr>
+      <tr><td>Annual</td><td>$180/yr</td><td>$300/yr</td><td>$600/yr</td></tr>
     </table>
   </div>
 </section>
 
 <script>
-const PRICES = { weekly: '$6', monthly: '$20', quarterly: '$50', annual: '$180' };
+const PRICES = {
+  tier1: { weekly: '$6', monthly: '$20', quarterly: '$50', annual: '$180' },
+  tier2: { weekly: '$12', monthly: '$35', quarterly: '$90', annual: '$300' },
+  tier3: { weekly: '$24', monthly: '$70', quarterly: '$180', annual: '$600' },
+};
 const PERIODS = { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' };
 
 document.querySelectorAll('.pt-btn').forEach(btn => {
@@ -65,49 +123,55 @@ document.querySelectorAll('.pt-btn').forEach(btn => {
     document.querySelectorAll('.pt-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const period = btn.dataset.period;
-    document.querySelectorAll('.price-amount').forEach(el => el.textContent = PRICES[period]);
+    // Update all price-amount elements
+    document.querySelectorAll('.price-amount').forEach(el => {
+      const tier = el.dataset.tier;
+      if (tier && PRICES[tier]) el.textContent = PRICES[tier][period];
+    });
     document.querySelectorAll('.price-period').forEach(el => el.textContent = PERIODS[period]);
   });
 });
 
-document.getElementById('subscribe-btn')?.addEventListener('click', async (e) => {
-  e.preventDefault();
+async function checkout(tier) {
   const period = document.querySelector('.pt-btn.active')?.dataset.period || 'monthly';
   try {
-    const r = await fetch('/payments/checkout/main?period=' + period, { method: 'POST' });
+    const r = await fetch('/payments/checkout/' + tier + '?period=' + period, { method: 'POST' });
     const d = await r.json();
     if (d.url) window.location.href = d.url;
   } catch(err) { alert('Checkout error: ' + err.message); }
-});
+}
 </script>
 
 <style>
 .pi { padding: 60px 0; text-align: center; }
 .pi-badge { display: inline-block; background: linear-gradient(135deg, var(--primary), #e17055); color: #fff; padding: 6px 20px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 16px; }
 .pi h1 { font-size: 2.4rem; margin-bottom: 6px; }
-.pi-sub { color: var(--text-muted); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; }
+.pi-sub { color: var(--text-muted); margin-bottom: 32px; max-width: 550px; margin-left: auto; margin-right: auto; }
 .period-toggle { display: flex; gap: 8px; justify-content: center; margin-bottom: 32px; flex-wrap: wrap; }
 .pt-btn { padding: 10px 28px; border: 2px solid var(--border); border-radius: 30px; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s; }
 .pt-btn:hover { border-color: var(--primary); color: var(--text); }
 .pt-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
-.plan-card { max-width: 420px; margin: 0 auto; background: var(--surface); border: 2px solid var(--primary); border-radius: var(--radius); padding: 32px 28px; text-align: center; }
-.pc-header { margin-bottom: 16px; }
-.pc-name { font-size: 1.1rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
-.pc-price { font-size: 3rem; font-weight: 700; }
-.pc-price small { font-size: 1rem; color: var(--text-muted); font-weight: 400; }
-.pc-desc { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px; }
-.pc-features { text-align: left; margin-bottom: 24px; }
-.pcf-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-.pcf-row:last-child { border-bottom: none; }
-.pcf-val { color: var(--text-muted); }
-.pc-btn { margin-top: 8px; }
-.pc-trial { font-size: 0.8rem; color: var(--text-muted); margin-top: 8px; }
-.pricing-reference { max-width: 420px; margin: 40px auto; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); text-align: left; }
+.tp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 800px; margin: 0 auto; }
+.tp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 20px; position: relative; display: flex; flex-direction: column; }
+.tp-card.feat { border-color: var(--primary); }
+.tp-badge { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 3px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+.tp-card h3 { font-size: 1.1rem; margin-bottom: 4px; }
+.tp-price { font-size: 2rem; font-weight: 700; margin-bottom: 12px; }
+.tp-price small { font-size: 0.85rem; color: var(--text-muted); font-weight: 400; }
+.tp-days { display: flex; gap: 4px; justify-content: center; margin-bottom: 8px; }
+.tp-days .d { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; background: var(--surface-2); color: var(--text-muted); }
+.tp-days .d.active { background: var(--primary); color: #fff; }
+.tp-card p { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px; }
+.tp-features { list-style: none; text-align: left; font-size: 0.8rem; margin-bottom: 16px; flex: 1; }
+.tp-features li { padding: 4px 0; color: var(--text-muted); }
+.tp-trial { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+.alert { padding: 12px; border-radius: var(--radius); margin-bottom: 16px; font-size: 0.85rem; }
+.alert-info { background: #2d4a7a; color: #fff; }
+.pricing-reference { max-width: 600px; margin: 40px auto; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); text-align: left; }
 .pricing-reference h3 { margin-bottom: 12px; font-size: 1rem; }
 .pr-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .pr-table th, .pr-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
 .pr-table th { color: var(--text-muted); font-weight: 600; }
-.alert { padding: 12px; border-radius: var(--radius); margin-bottom: 16px; font-size: 0.85rem; }
-.alert-info { background: #2d4a7a; color: #fff; }
+@media (max-width: 700px) { .tp-grid { grid-template-columns: 1fr; } }
 </style>
 <%- include('../partials/footer') %>

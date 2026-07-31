@@ -6,8 +6,8 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$PROJECT_DIR/.env"
 
 echo "╔══════════════════════════════════════════════╗"
-echo "║  Bonus Scraper Pro — Stripe Setup           ║"
-echo "║  Creates 4 prices: 1 plan × 4 periods       ║"
+echo "║  Bonus Scraper Pro — Full Stripe Setup      ║"
+echo "║  Creates 12 prices: 3 tiers × 4 periods     ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""
 
@@ -32,35 +32,54 @@ stripe_api() {
 
 create_price() {
   local name="$1" desc="$2" amount="$3" interval="$4" interval_count="$5"
-  local product=$(stripe_api POST /products "name=Bonus+Scraper+Pro&description=${desc}")
+  local product=$(stripe_api POST /products "name=Bonus+Scraper+Pro+${name}&description=${desc}")
   local prod_id=$(echo "$product" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
   local price=$(stripe_api POST /prices "currency=usd&product=${prod_id}&unit_amount=${amount}&recurring[interval]=${interval}&recurring[interval_count]=${interval_count}")
   echo "$price" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])"
 }
 
-echo "🔧 Creating 4 prices (1 plan × 4 periods)..."
+echo "🔧 Creating 12 prices (3 tiers × 4 periods)..."
 echo ""
 
-# Define prices: name, description, amount_cents, interval, interval_count
+# Starter: $6/wk $20/mo $50/qtr $180/yr
+# Pro:     $12/wk $35/mo $90/qtr $300/yr
+# Elite:   $24/wk $70/mo $180/qtr $600/yr
+
 PRICES=(
-  "Weekly|Weekly+billing|600|week|1"
-  "Monthly|Monthly+billing|2000|month|1"
-  "Quarterly|Quarterly+billing|5000|month|3"
-  "Annual|Annual+billing|18000|year|1"
+  "Starter+Weekly|Weekly+Monday+scrape|600|week|1"
+  "Starter|Monthly+Monday+scrape|2000|month|1"
+  "Starter+Quarterly|Quarterly+Monday+scrape|5000|month|3"
+  "Starter+Annual|Annual+Monday+scrape|18000|year|1"
+  "Pro+Weekly|Weekly+Mon+Thu+Sat+scrape|1200|week|1"
+  "Pro|Monthly+Mon+Thu+Sat+scrape|3500|month|1"
+  "Pro+Quarterly|Quarterly+Mon+Thu+Sat+scrape|9000|month|3"
+  "Pro+Annual|Annual+Mon+Thu+Sat+scrape|30000|year|1"
+  "Elite+Weekly|Weekly+Daily+scrape|2400|week|1"
+  "Elite|Monthly+Daily+scrape|7000|month|1"
+  "Elite+Quarterly|Quarterly+Daily+scrape|18000|month|3"
+  "Elite+Annual|Annual+Daily+scrape|60000|year|1"
 )
 
 VARS=(
-  STRIPE_PRICE_MAIN_WEEKLY
-  STRIPE_PRICE_MAIN_MONTHLY
-  STRIPE_PRICE_MAIN_QUARTERLY
-  STRIPE_PRICE_MAIN_ANNUAL
+  STRIPE_PRICE_STARTER_WEEKLY
+  STRIPE_PRICE_STARTER
+  STRIPE_PRICE_STARTER_QUARTERLY
+  STRIPE_PRICE_STARTER_ANNUAL
+  STRIPE_PRICE_PRO_WEEKLY
+  STRIPE_PRICE_PRO
+  STRIPE_PRICE_PRO_QUARTERLY
+  STRIPE_PRICE_PRO_ANNUAL
+  STRIPE_PRICE_ELITE_WEEKLY
+  STRIPE_PRICE_ELITE
+  STRIPE_PRICE_ELITE_QUARTERLY
+  STRIPE_PRICE_ELITE_ANNUAL
 )
 
 i=0
 for price_def in "${PRICES[@]}"; do
   IFS='|' read -r name desc amount interval interval_count <<< "$price_def"
   var="${VARS[$i]}"
-  echo -n "  $((i+1))/4 $name... "
+  echo -n "  $((i+1))/12 $name... "
   price_id=$(create_price "$name" "$desc" "$amount" "$interval" "$interval_count")
   echo "$price_id"
   eval "$var=$price_id"
@@ -69,27 +88,22 @@ done
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
-echo "║  ✅ All 4 prices created!                   ║"
+echo "║  ✅ All 12 prices created!                  ║"
 echo "╚══════════════════════════════════════════════╝"
 echo ""
 
 if [ -f "$ENV_FILE" ]; then
-  # Clear old price vars
-  for var in STRIPE_PRICE_MAIN_WEEKLY STRIPE_PRICE_MAIN_MONTHLY STRIPE_PRICE_MAIN_QUARTERLY STRIPE_PRICE_MAIN_ANNUAL; do
+  for var in STRIPE_PRICE_STARTER STRIPE_PRICE_PRO STRIPE_PRICE_ELITE \
+             STRIPE_PRICE_STARTER_WEEKLY STRIPE_PRICE_STARTER_QUARTERLY STRIPE_PRICE_STARTER_ANNUAL \
+             STRIPE_PRICE_PRO_WEEKLY STRIPE_PRICE_PRO_QUARTERLY STRIPE_PRICE_PRO_ANNUAL \
+             STRIPE_PRICE_ELITE_WEEKLY STRIPE_PRICE_ELITE_QUARTERLY STRIPE_PRICE_ELITE_ANNUAL; do
     sed -i "/^${var}=/d" "$ENV_FILE" 2>/dev/null || true
   done
-
-  # Write new values
-  for var in "${VARS[@]}"; do
-    echo "${var}=${!var}" >> "$ENV_FILE"
-  done
-
+  for var in "${VARS[@]}"; do echo "${var}=${!var}" >> "$ENV_FILE"; done
   echo "📝 $ENV_FILE updated automatically!"
 else
   echo "📝  Save these to $ENV_FILE:"
-  for var in "${VARS[@]}"; do
-    echo "  ${var}=${!var}"
-  done
+  for var in "${VARS[@]}"; do echo "  ${var}=${!var}"; done
 fi
 
 echo ""

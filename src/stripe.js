@@ -6,14 +6,6 @@ if (config.stripeSecretKey) {
   stripe = Stripe(config.stripeSecretKey);
 }
 
-// Map period to Stripe interval
-const INTERVAL_MAP = {
-  weekly: { interval: 'week', count: 1 },
-  monthly: { interval: 'month', count: 1 },
-  quarterly: { interval: 'month', count: 3 },
-  annual: { interval: 'year', count: 1 },
-};
-
 async function createCheckoutSession(customer, tierId, tier, period) {
   if (!stripe) throw new Error('Stripe not configured. Set STRIPE_SECRET_KEY');
 
@@ -37,8 +29,8 @@ async function createCheckoutSession(customer, tierId, tier, period) {
     cancel_url: `${config.baseUrl}/pricing?cancelled=1`,
   };
 
-  // Trial: only monthly period gets the free first month
-  if (period === 'monthly') {
+  // Trial: only Starter monthly gets a free month
+  if (tierId === 'tier1' && period === 'monthly') {
     params.subscription_data = { trial_period_days: 30 };
   }
 
@@ -70,7 +62,7 @@ async function handleWebhook(body, signature) {
     case 'checkout.session.completed': {
       const session = event.data.object;
       const customerId = parseInt(session.metadata.customer_id);
-      const tier = session.metadata.tier || 'main';
+      const tier = session.metadata.tier || 'tier1';
       const period = session.metadata.period || 'monthly';
       const tierConfig = getTier(tier);
       const licenseKey = generateLicenseKey();

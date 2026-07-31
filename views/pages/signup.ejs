@@ -1,14 +1,15 @@
 <%- include('../partials/header') %>
 <section class="ap"><div class="ac">
   <h1>Create Account</h1>
-  <p>Get your free API key and start scraping.</p>
+  <p>Get your license and start scraping.</p>
   <% if (locals.error) { %><div class="alert alert-error"><%= error %></div><% } %>
   <form method="POST" action="/signup">
+    <% if (locals.tier) { %><input type="hidden" name="tier" value="<%= tier %>"><% } %>
     <div class="fg"><label>Name</label><input type="text" name="name" placeholder="Your name"></div>
     <div class="fg"><label>Email</label><input type="email" name="email" placeholder="you@example.com" required></div>
     <div class="fg"><label>Password</label><input type="password" name="password" placeholder="Min 8 characters" minlength="8" required></div>
     <button type="submit" class="btn btn-primary btn-block">Create Account</button>
   </form>
-  <p class="al">Already have one? <a href="/login">Log in</a></p>
+  <p class="al">Already have one? <a href="/login<%= locals.tier ? '?tier=' + tier : '' %>">Log in</a></p>
 </div></section>
 <%- include('../partials/footer') %>
