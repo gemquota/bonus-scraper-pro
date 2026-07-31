@@ -26,7 +26,10 @@ function save() {
 }
 
 async function init() {
-  const SQL = await initSqlJs();
+  // sql.js needs its WASM binary; on serverless the default lookup fails,
+  // so point it at the copy we ship in public/ (readable, not writable).
+  const wasmPath = path.join(__dirname, '..', 'public', 'sql-wasm.wasm');
+  const SQL = await initSqlJs({ locateFile: () => wasmPath });
   if (fs.existsSync(dbPath)) {
     db = new SQL.Database(fs.readFileSync(dbPath));
   } else {
