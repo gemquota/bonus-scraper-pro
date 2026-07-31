@@ -566,7 +566,7 @@ function renderFormulaSliders() {
     document.getElementById('fslider-' + cfg.id).addEventListener('input', e => {
       formula[cfg.id] = parseFloat(e.target.value);
       document.getElementById('fval-' + cfg.id).textContent = cfg.fmt(formula[cfg.id]);
-      applyFormula();
+      applyFormulaValues();
     });
     editableValue(document.getElementById('fval-' + cfg.id), {
       min: cfg.min, max: cfg.max, step: cfg.step,
@@ -613,7 +613,31 @@ function syncFormulaFromValues() {
   updateFormulaOut();
 }
 
-function applyFormula() {
+// live-update scheduler: slider drags update prices instantly, but the heavy
+// chart/tree re-renders are coalesced to one pass per animation frame so the
+// sliders keep responding smoothly while dragging.
+let fullUpdateQueued = false;
+const raf = window.requestAnimationFrame || (fn => setTimeout(fn, 16));
+function runFullUpdate() {
+  fullUpdateQueued = false;
+  renderInputs();
+  saveState();
+  renderAll();
+  renderVariants();
+  updateFormulaOut();
+  if (formulaMode === 'simple') renderTrapezoid();
+}
+function scheduleFullUpdate() {
+  if (fullUpdateQueued) return;
+  fullUpdateQueued = true;
+  raf(runFullUpdate);
+}
+function forceFullUpdate() {
+  fullUpdateQueued = false;
+  runFullUpdate();
+}
+
+function applyFormulaValues() {
   const ms = computeMonthly();
   const pf = periodFactors();
   TIERS.forEach((t, i) => {
@@ -624,13 +648,12 @@ function applyFormula() {
     values[t.id].annual = Math.max(12, Math.round(m * pf.yr));
   });
   currentVariant = 'formula';
-  renderInputs();
-  renderSliders();
-  saveState();
-  renderAll();
-  renderVariants();
-  updateFormulaOut();
-  if (formulaMode === 'simple') renderTrapezoid();
+  syncSliders();
+  scheduleFullUpdate();
+}
+function applyFormula() {
+  applyFormulaValues();
+  forceFullUpdate();
 }
 
 function updateFormulaOut() {
@@ -804,11 +827,9 @@ function applySlider(tierId, monthly) {
   values[tierId].weekly = Math.max(1, Math.round(monthly * SLIDER_MULT.weekly));
   values[tierId].quarterly = Math.max(3, Math.round(monthly * SLIDER_MULT.quarterly));
   values[tierId].annual = Math.max(12, Math.round(monthly * SLIDER_MULT.annual));
-  renderInputs();
-  renderSliders();
-  saveState();
-  renderAll();
-  updateVariantDesc();
+  syncSliders();
+  syncFormulaFromValues();
+  scheduleFullUpdate();
 }
 
 function syncSliders() {
@@ -842,10 +863,9 @@ function renderInputs() {
       const tier = inp.dataset.tier, period = inp.dataset.period;
       const v = parseFloat(inp.value);
       values[tier][period] = isNaN(v) || v < 0 ? 0 : v;
-      saveState();
       syncSliders();
-      renderAll();
-      updateVariantDesc();
+      syncFormulaFromValues();
+      scheduleFullUpdate();
     });
   });
 }
