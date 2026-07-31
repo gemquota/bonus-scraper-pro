@@ -1,8 +1,0 @@
-{
-  "version": 2,
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "^/$", "dest": "/home", "status": 301 },
-    { "src": "/.*", "dest": "/api/index.js" }
-  ]
-}
