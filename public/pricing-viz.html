@@ -84,12 +84,18 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 .snap-badge { background: var(--green); color: #fff; font-size: 0.6rem; padding: 2px 8px; border-radius: 12px; vertical-align: middle; font-weight: 700; letter-spacing: 0.5px; }
 @media (max-width: 860px) { .slider-grid { grid-template-columns: 1fr; } }
 
+/* Growth */
+.growth-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.heat-grid.cols-3 { grid-template-columns: 90px repeat(3, 1fr); }
+
 /* Mobile */
 @media (max-width: 860px) {
   .charts-grid { grid-template-columns: 1fr; }
   .input-grid { grid-template-columns: 1fr; }
   .tables-grid { grid-template-columns: 1fr; }
   .heat-grid { grid-template-columns: 70px repeat(4, 1fr); }
+  .heat-grid.cols-3 { grid-template-columns: 70px repeat(3, 1fr); }
+  .growth-blocks { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -152,9 +158,36 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     </div>
   </div>
 
+  <!-- Growth rates -->
+  <div class="card">
+    <h2>5. Growth Rates</h2>
+    <p class="sub" style="margin-bottom:14px">How much more you pay as the billing period shortens, and how much more each tier costs than the one below. All values are percentage growth rates.</p>
+    <div class="tables-grid">
+      <div class="pb-table" id="gPeriodTable"></div>
+      <div class="pb-table" id="gTierTable"></div>
+    </div>
+    <div class="charts-grid" style="margin-top:20px">
+      <div class="chart-box">
+        <h3>Period Premium — Shorter vs Longer</h3>
+        <p class="cap">% more per year when billing weekly instead of monthly, monthly instead of quarterly, etc. Taller bar = bigger penalty for the shorter period.</p>
+        <div class="chart-wrap"><canvas id="gPeriodChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Tier Growth — Starter → Pro → Elite</h3>
+        <p class="cap">% price increase between tiers for each billing period. Shows how steep the upgrade ladder is.</p>
+        <div class="chart-wrap"><canvas id="gTierChart"></canvas></div>
+      </div>
+      <div class="chart-box full">
+        <h3>Growth Heatmap</h3>
+        <p class="cap">Left: period premium per tier (red intensity = bigger penalty). Right: tier growth per period (amber intensity = steeper upgrade).</p>
+        <div id="gHeatmap"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Charts -->
   <div class="card">
-    <h2>5. Charts</h2>
+    <h2>6. Charts</h2>
     <div class="legend" id="legend"></div>
     <div class="charts-grid">
       <div class="chart-box">
@@ -198,7 +231,7 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 </div>
   <!-- Per-day deep dive -->
   <div class="card">
-    <h2>6. $ Per Day Deep Dive</h2>
+    <h2>7. $ Per Day Deep Dive</h2>
     <p class="sub" style="margin-bottom:14px">Cost per day for every tier and billing period. Treemap area = $/day, heatmap colour = $/day.</p>
     <div class="charts-grid">
       <div class="chart-box full">
@@ -653,6 +686,20 @@ function copyMarkdown() {
     });
     md += '\n';
   });
+  // Growth-rate tables
+  md += '\n## Growth Rates\n';
+  md += '### Period Premium (% more per year vs longer period)\n| Shorter vs Longer | Starter | Pro | Elite |\n|---|---|---|---|\n';
+  PERIOD_PAIRS.forEach(pair => {
+    md += '| ' + pair.label + ' |';
+    TIERS.forEach(t => md += ' ' + fmtPct(periodPremium(t.id, pair.short, pair.long)) + ' |');
+    md += '\n';
+  });
+  md += '\n### Tier Growth (% price increase)\n| Upgrade | Weekly | Monthly | Quarterly | Annual |\n|---|---|---|---|---|\n';
+  TIER_PAIRS.forEach(pair => {
+    md += '| ' + pair.label + ' |';
+    PERIODS.forEach(p => md += ' ' + fmtPct(tierGrowth(p.id, pair.low, pair.high)) + ' |');
+    md += '\n';
+  });
   navigator.clipboard.writeText(md.trim()).then(() => toast('Markdown tables copied!'));
 }
 function toast(msg) {
@@ -753,6 +800,153 @@ function renderDiffBar() {
       },
     },
   });
+}
+
+// ---- growth rates ---------------------------------------------------------
+const PERIOD_PAIRS = [
+  { short: 'weekly', long: 'monthly', label: 'Weekly vs Monthly' },
+  { short: 'monthly', long: 'quarterly', label: 'Monthly vs Quarterly' },
+  { short: 'quarterly', long: 'annual', label: 'Quarterly vs Annual' },
+  { short: 'weekly', long: 'annual', label: 'Weekly vs Annual' },
+];
+const TIER_PAIRS = [
+  { low: 'tier1', high: 'tier2', label: 'Starter → Pro' },
+  { low: 'tier2', high: 'tier3', label: 'Pro → Elite' },
+  { low: 'tier1', high: 'tier3', label: 'Starter → Elite' },
+];
+
+function growthPct(a, b) {
+  if (!b) return null;
+  return (a / b - 1) * 100;
+}
+function fmtPct(n) {
+  if (n === null || isNaN(n)) return '—';
+  const r = Math.round(n);
+  return (r > 0 ? '+' : '') + r + '%';
+}
+function periodPremium(tierId, shortId, longId) {
+  return growthPct(toAnnual(tierId, shortId), toAnnual(tierId, longId));
+}
+function tierGrowth(periodId, lowId, highId) {
+  return growthPct(values[highId][periodId], values[lowId][periodId]);
+}
+function growthColor(v, max, rgb) {
+  const inten = max ? Math.max(0, Math.min(1, v / max)) : 0;
+  return 'rgba(' + rgb + ',' + (0.15 + 0.85 * inten) + ')';
+}
+
+function renderGPeriodTable() {
+  const wrap = document.getElementById('gPeriodTable');
+  let html = '<h3>Period Premium — % More Per Year</h3><table><tr><th>Shorter vs Longer</th>';
+  TIERS.forEach(t => html += '<th>' + t.name + '</th>');
+  html += '</tr>';
+  PERIOD_PAIRS.forEach(pair => {
+    html += '<tr><td>' + pair.label + '</td>';
+    TIERS.forEach(t => {
+      const p = periodPremium(t.id, pair.short, pair.long);
+      const cls = p > 0 ? 'worst' : 'best';
+      html += '<td class="' + cls + '">' + fmtPct(p) + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+function renderGTierTable() {
+  const wrap = document.getElementById('gTierTable');
+  let html = '<h3>Tier Growth — % Price Increase</h3><table><tr><th>Upgrade</th>';
+  PERIODS.forEach(p => html += '<th>' + p.name + '</th>');
+  html += '</tr>';
+  TIER_PAIRS.forEach(pair => {
+    html += '<tr><td>' + pair.label + '</td>';
+    PERIODS.forEach(p => {
+      const g = tierGrowth(p.id, pair.low, pair.high);
+      const cls = g > 0 ? 'worst' : 'best';
+      html += '<td class="' + cls + '">' + fmtPct(g) + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+function renderGPeriodChart() {
+  const ctx = document.getElementById('gPeriodChart').getContext('2d');
+  charts.gPeriod = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: PERIOD_PAIRS.map(p => p.label),
+      datasets: TIERS.map(t => ({
+        label: t.name,
+        data: PERIOD_PAIRS.map(p => Math.round(periodPremium(t.id, p.short, p.long))),
+        backgroundColor: t.color,
+        borderRadius: 6,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        y: { ticks: { color: '#8b949e', callback: v => v + '%' }, grid: { color: '#2d333b' }, beginAtZero: true,
+             title: { display: true, text: '% more per year vs longer period', color: '#8b949e' } },
+      },
+    },
+  });
+}
+
+function renderGTierChart() {
+  const ctx = document.getElementById('gTierChart').getContext('2d');
+  charts.gTier = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: PERIODS.map(p => p.name),
+      datasets: TIER_PAIRS.map(pair => ({
+        label: pair.label,
+        data: PERIODS.map(p => Math.round(tierGrowth(p.id, pair.low, pair.high))),
+        backgroundColor: pair.low === 'tier1' ? '#3b82f6' : '#a78bfa',
+        borderRadius: 6,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        y: { ticks: { color: '#8b949e', callback: v => v + '%' }, grid: { color: '#2d333b' }, beginAtZero: true,
+             title: { display: true, text: '% price increase between tiers', color: '#8b949e' } },
+      },
+    },
+  });
+}
+
+function renderGHeatmap() {
+  const wrap = document.getElementById('gHeatmap');
+  const ppMax = Math.max(...PERIOD_PAIRS.map(pair => TIERS.map(t => periodPremium(t.id, pair.short, pair.long))).flat().map(n => n || 0), 0.01);
+  const tgMax = Math.max(...TIER_PAIRS.map(pair => PERIODS.map(p => tierGrowth(p.id, pair.low, pair.high))).flat().map(n => n || 0), 0.01);
+  let html = '<div class="growth-blocks">';
+  html += '<div class="heat-grid cols-3"><div class="hc"></div>';
+  TIERS.forEach(t => html += '<div class="hc" style="color:' + t.color + ';font-weight:700">' + t.name + '</div>');
+  PERIOD_PAIRS.forEach(pair => {
+    html += '<div class="hc">' + pair.label + '</div>';
+    TIERS.forEach(t => {
+      const v = periodPremium(t.id, pair.short, pair.long) || 0;
+      html += '<div class="heat-cell" style="background:' + growthColor(v, ppMax, '239,68,68') + '"><span><span class="hlabel">% more/yr</span>' + fmtPct(v) + '</span></div>';
+    });
+  });
+  html += '</div>';
+  html += '<div class="heat-grid"><div class="hc"></div>';
+  PERIODS.forEach(p => html += '<div class="hc">' + p.name + '</div>');
+  TIER_PAIRS.forEach(pair => {
+    html += '<div class="hc">' + pair.label + '</div>';
+    PERIODS.forEach(p => {
+      const v = tierGrowth(p.id, pair.low, pair.high) || 0;
+      html += '<div class="heat-cell" style="background:' + growthColor(v, tgMax, '245,158,11') + '"><span><span class="hlabel">price +</span>' + fmtPct(v) + '</span></div>';
+    });
+  });
+  html += '</div></div>';
+  wrap.innerHTML = html;
 }
 
 function pdMax() {
@@ -880,6 +1074,11 @@ function renderAll() {
   renderDiffTable();
   renderDiffLine();
   renderDiffBar();
+  renderGPeriodTable();
+  renderGTierTable();
+  renderGPeriodChart();
+  renderGTierChart();
+  renderGHeatmap();
   renderBar();
   renderHeatmap();
   renderPerDayChart();
