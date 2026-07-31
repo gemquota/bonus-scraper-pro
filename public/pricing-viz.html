@@ -73,6 +73,17 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.75rem; color: var(--muted); }
 .legend span { display: flex; align-items: center; gap: 6px; }
 
+/* Sliders */
+.slider-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.slider-block { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.slider-block .sl-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.slider-block label { font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.slider-val { font-size: 1.3rem; font-weight: 700; }
+.slider-block input[type="range"] { width: 100%; accent-color: var(--blue); cursor: pointer; }
+.slider-block .sl-note { font-size: 0.7rem; color: var(--muted); margin-top: 6px; }
+.snap-badge { background: var(--green); color: #fff; font-size: 0.6rem; padding: 2px 8px; border-radius: 12px; vertical-align: middle; font-weight: 700; letter-spacing: 0.5px; }
+@media (max-width: 860px) { .slider-grid { grid-template-columns: 1fr; } }
+
 /* Mobile */
 @media (max-width: 860px) {
   .charts-grid { grid-template-columns: 1fr; }
@@ -86,6 +97,13 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 <div class="container">
   <h1>📊 Pricing Visualizer</h1>
   <p class="sub">Enter the 12 prices — tables and charts update live. Values persist in the URL.</p>
+
+  <!-- Quick-set sliders -->
+  <div class="card">
+    <h2>Quick-Set Sliders <span class="snap-badge">SNAP TO WHOLE $</span></h2>
+    <p class="sub" style="margin-bottom:14px">Drag to set each tier's monthly price — Weekly, Quarterly and Annual are derived automatically and snapped to whole dollars. Fine-tune any value in the grid below.</p>
+    <div class="slider-grid" id="sliderGrid"></div>
+  </div>
 
   <!-- Inputs -->
   <div class="card">
@@ -261,6 +279,56 @@ function convert(tier, from, to) {
   }
 }
 
+// ---- quick-set sliders ----------------------------------------------------
+const SLIDER_CFG = [
+  { tier: 'tier1', label: 'Starter', max: 100, color: '#3b82f6' },
+  { tier: 'tier2', label: 'Pro', max: 200, color: '#f59e0b' },
+  { tier: 'tier3', label: 'Elite', max: 400, color: '#10b981' },
+];
+// Weekly ~30% of monthly, Quarterly ~2.5x, Annual ~9x (matches current defaults)
+const SLIDER_MULT = { weekly: 0.3, quarterly: 2.5, annual: 9 };
+
+function renderSliders() {
+  const wrap = document.getElementById('sliderGrid');
+  wrap.innerHTML = '';
+  SLIDER_CFG.forEach(cfg => {
+    const block = document.createElement('div');
+    block.className = 'slider-block';
+    block.innerHTML =
+      '<div class="sl-head"><label><span class="dot" style="background:' + cfg.color + '"></span>' + cfg.label + ' /mo</label>' +
+      '<span class="slider-val" id="slider-val-' + cfg.tier + '">$' + values[cfg.tier].monthly + '</span></div>' +
+      '<input type="range" id="slider-' + cfg.tier + '" min="1" max="' + cfg.max + '" step="1" value="' + Math.min(values[cfg.tier].monthly, cfg.max) + '">' +
+      '<div class="sl-note">Weekly ~30% · Quarterly ~2.5x · Annual ~9x of monthly</div>';
+    wrap.appendChild(block);
+    document.getElementById('slider-' + cfg.tier).addEventListener('input', (e) => {
+      applySlider(cfg.tier, parseInt(e.target.value, 10));
+    });
+  });
+}
+
+function applySlider(tierId, monthly) {
+  monthly = Math.max(1, Math.min(parseInt(monthly, 10) || 1, 9999));
+  values[tierId].monthly = monthly;
+  values[tierId].weekly = Math.max(1, Math.round(monthly * SLIDER_MULT.weekly));
+  values[tierId].quarterly = Math.max(3, Math.round(monthly * SLIDER_MULT.quarterly));
+  values[tierId].annual = Math.max(12, Math.round(monthly * SLIDER_MULT.annual));
+  renderInputs();
+  renderSliders();
+  saveState();
+  renderAll();
+}
+
+function syncSliders() {
+  SLIDER_CFG.forEach(cfg => {
+    const el = document.getElementById('slider-' + cfg.tier);
+    const valEl = document.getElementById('slider-val-' + cfg.tier);
+    if (el) {
+      el.value = Math.min(values[cfg.tier].monthly, cfg.max);
+      valEl.textContent = '$' + values[cfg.tier].monthly;
+    }
+  });
+}
+
 // ---- render inputs --------------------------------------------------------
 function renderInputs() {
   const grid = document.getElementById('inputGrid');
@@ -282,6 +350,7 @@ function renderInputs() {
       const v = parseFloat(inp.value);
       values[tier][period] = isNaN(v) || v < 0 ? 0 : v;
       saveState();
+      syncSliders();
       renderAll();
     });
   });
@@ -822,6 +891,7 @@ function renderAll() {
 
 loadState();
 renderInputs();
+renderSliders();
 renderLegend();
 renderAll();
 </script>
