@@ -5,7 +5,7 @@ const path = require('path');
 const config = require('./config');
 const db = require('./db');
 
-async function main() {
+async function createApp() {
   await db.init();
 
   const app = express();
@@ -49,18 +49,24 @@ async function main() {
   app.get('/pricing', (req, res) => res.render('pages/pricing', { checkout: req.query.checkout }));
   app.get('/docs', (req, res) => res.render('pages/docs'));
 
-  app.listen(config.port, () => {
-    console.log(`\n╔══════════════════════════════════════════╗`);
-    console.log(`║  🕸️  Bonus Scraper Pro                   ║`);
-    console.log(`║  Subscription & License Management       ║`);
-    console.log(`╚══════════════════════════════════════════╝`);
-    console.log(`\n  📍 ${config.baseUrl}`);
-    console.log(`  💰 Stripe: ${config.stripeSecretKey ? '✅ Ready' : '⚠️  Not configured'}`);
-    console.log(`\n  🔑 License API:       POST /api/license/validate`);
-    console.log(`  📊 Stripe Webhook:    POST /payments/webhook`);
-    console.log(`  📖 Docs:              /docs`);
-    console.log('');
-  });
+  return app;
 }
 
-main().catch(err => { console.error('Fatal:', err); process.exit(1); });
+module.exports = createApp;
+
+if (require.main === module) {
+  createApp().then(app => {
+    app.listen(config.port, () => {
+      console.log(`\n╔══════════════════════════════════════════╗`);
+      console.log(`║  🕸️  Bonus Scraper Pro                   ║`);
+      console.log(`║  Subscription & License Management       ║`);
+      console.log(`╚══════════════════════════════════════════╝`);
+      console.log(`\n  📍 ${config.baseUrl}`);
+      console.log(`  💰 Stripe: ${config.stripeSecretKey ? '✅ Ready' : '⚠️  Not configured'}`);
+      console.log(`\n  🔑 License API:       POST /api/license/validate`);
+      console.log(`  📊 Stripe Webhook:    POST /payments/webhook`);
+      console.log(`  📖 Docs:              /docs`);
+      console.log('');
+    });
+  }).catch(err => { console.error('Fatal:', err); process.exit(1); });
+}

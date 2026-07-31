@@ -2,8 +2,22 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
-const dbPath = path.join(__dirname, '..', 'data', 'app.db');
+const dataDir = path.join(__dirname, '..', 'data');
+const SEED_DB = path.join(dataDir, 'seed.db');
+let dbPath = path.join(dataDir, 'app.db');
+
+// Serverless platforms (Vercel) have a read-only project dir — use /tmp.
+if (process.env.VERCEL) {
+  fs.mkdirSync('/tmp/bonus-scraper', { recursive: true });
+  dbPath = '/tmp/bonus-scraper/app.db';
+}
+
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
+// Seed fresh instances (serverless cold start / ephemeral disk) from committed seed DB
+if (!fs.existsSync(dbPath) && fs.existsSync(SEED_DB)) {
+  fs.copyFileSync(SEED_DB, dbPath);
+}
 
 let db = null;
 

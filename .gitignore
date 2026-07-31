@@ -9,3 +9,6 @@ srv.log
 cloudflared.log
 start-live.sh
 update_golf_main.py
+tun*.log
+tunnel.log
+*.log

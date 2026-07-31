@@ -98,15 +98,52 @@
     </div>
   </div>
 
-  <div class="pricing-reference">
-    <h3>📊 Period Comparison</h3>
-    <table class="pr-table">
-      <tr><th>Period</th><th>Starter</th><th>Pro</th><th>Elite</th></tr>
-      <tr><td>Weekly</td><td>$6/wk</td><td>$12/wk</td><td>$24/wk</td></tr>
-      <tr><td>Monthly</td><td>$20/mo</td><td>$35/mo</td><td>$70/mo</td></tr>
-      <tr><td>Quarterly</td><td>$50/qtr</td><td>$90/qtr</td><td>$180/qtr</td></tr>
-      <tr><td>Annual</td><td>$180/yr</td><td>$300/yr</td><td>$600/yr</td></tr>
-    </table>
+  <div class="period-breakdown">
+    <h2>📊 Cost Comparison — What Each Period Equates To</h2>
+
+    <div class="pb-table">
+      <h3>If You Pay Weekly</h3>
+      <table>
+        <tr><th>Period</th><th>Starter</th><th>Pro</th><th>Elite</th></tr>
+        <tr><td>Weekly</td><td><strong>$6/wk</strong></td><td><strong>$12/wk</strong></td><td><strong>$24/wk</strong></td></tr>
+        <tr><td>Monthly</td><td>$26/mo</td><td>$52/mo</td><td>$104/mo</td></tr>
+        <tr><td>Quarterly</td><td>$78/qtr</td><td>$156/qtr</td><td>$312/qtr</td></tr>
+        <tr><td>Annual</td><td>$312/yr</td><td>$624/yr</td><td>$1,248/yr</td></tr>
+      </table>
+    </div>
+
+    <div class="pb-table">
+      <h3>If You Pay Monthly</h3>
+      <table>
+        <tr><th>Period</th><th>Starter</th><th>Pro</th><th>Elite</th></tr>
+        <tr><td>Weekly</td><td>$5/wk</td><td>$8/wk</td><td>$16/wk</td></tr>
+        <tr><td>Monthly</td><td><strong>$20/mo</strong></td><td><strong>$35/mo</strong></td><td><strong>$70/mo</strong></td></tr>
+        <tr><td>Quarterly</td><td>$60/qtr</td><td>$105/qtr</td><td>$210/qtr</td></tr>
+        <tr><td>Annual</td><td>$240/yr</td><td>$420/yr</td><td>$840/yr</td></tr>
+      </table>
+    </div>
+
+    <div class="pb-table">
+      <h3>If You Pay Quarterly</h3>
+      <table>
+        <tr><th>Period</th><th>Starter</th><th>Pro</th><th>Elite</th></tr>
+        <tr><td>Weekly</td><td>$4/wk</td><td>$7/wk</td><td>$14/wk</td></tr>
+        <tr><td>Monthly</td><td>$17/mo</td><td>$30/mo</td><td>$60/mo</td></tr>
+        <tr><td>Quarterly</td><td><strong>$50/qtr</strong></td><td><strong>$90/qtr</strong></td><td><strong>$180/qtr</strong></td></tr>
+        <tr><td>Annual</td><td>$200/yr</td><td>$360/yr</td><td>$720/yr</td></tr>
+      </table>
+    </div>
+
+    <div class="pb-table">
+      <h3>If You Pay Annually</h3>
+      <table>
+        <tr><th>Period</th><th>Starter</th><th>Pro</th><th>Elite</th></tr>
+        <tr><td>Weekly</td><td>$3/wk</td><td>$6/wk</td><td>$12/wk</td></tr>
+        <tr><td>Monthly</td><td>$15/mo</td><td>$25/mo</td><td>$50/mo</td></tr>
+        <tr><td>Quarterly</td><td>$45/qtr</td><td>$75/qtr</td><td>$150/qtr</td></tr>
+        <tr><td>Annual</td><td><strong>$180/yr</strong></td><td><strong>$300/yr</strong></td><td><strong>$600/yr</strong></td></tr>
+      </table>
+    </div>
   </div>
 </section>
 
@@ -123,7 +160,6 @@ document.querySelectorAll('.pt-btn').forEach(btn => {
     document.querySelectorAll('.pt-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const period = btn.dataset.period;
-    // Update all price-amount elements
     document.querySelectorAll('.price-amount').forEach(el => {
       const tier = el.dataset.tier;
       if (tier && PRICES[tier]) el.textContent = PRICES[tier][period];
@@ -167,11 +203,16 @@ async function checkout(tier) {
 .tp-trial { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
 .alert { padding: 12px; border-radius: var(--radius); margin-bottom: 16px; font-size: 0.85rem; }
 .alert-info { background: #2d4a7a; color: #fff; }
-.pricing-reference { max-width: 600px; margin: 40px auto; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); text-align: left; }
-.pricing-reference h3 { margin-bottom: 12px; font-size: 1rem; }
-.pr-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.pr-table th, .pr-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; }
-.pr-table th { color: var(--text-muted); font-weight: 600; }
+
+.period-breakdown { max-width: 800px; margin: 48px auto 0; text-align: left; }
+.period-breakdown h2 { text-align: center; font-size: 1.3rem; margin-bottom: 28px; }
+.pb-table { margin-bottom: 28px; }
+.pb-table h3 { font-size: 0.95rem; margin-bottom: 8px; color: var(--primary); }
+.pb-table table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.pb-table th, .pb-table td { padding: 8px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+.pb-table th { color: var(--text-muted); font-weight: 600; }
+.pb-table td strong { color: var(--primary); }
+
 @media (max-width: 700px) { .tp-grid { grid-template-columns: 1fr; } }
 </style>
 <%- include('../partials/footer') %>
