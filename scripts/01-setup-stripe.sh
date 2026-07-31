@@ -44,20 +44,20 @@ echo ""
 # Define prices: name, description, amount_cents, interval, interval_count
 PRICES=(
   # Starter
-  "Starter+Weekly|Weekly+Monday+scrape|1200|week|1"
-  "Starter|Monthly+Monday+scrape|4700|month|1"
-  "Starter+Quarterly|Quarterly+Monday+scrape|12000|month|3"
-  "Starter+Annual|Annual+Monday+scrape|40000|year|1"
+  "Starter+Weekly|Weekly+Monday+scrape|600|week|1"
+  "Starter|Monthly+Monday+scrape|1500|month|1"
+  "Starter+Quarterly|Quarterly+Monday+scrape|4000|month|3"
+  "Starter+Annual|Annual+Monday+scrape|12000|year|1"
   # Pro
-  "Pro+Weekly|Weekly+Mon+Thu+Sat+scrape|2500|week|1"
-  "Pro|Monthly+Mon+Thu+Sat+scrape|9700|month|1"
-  "Pro+Quarterly|Quarterly+Mon+Thu+Sat+scrape|25000|month|3"
-  "Pro+Annual|Annual+Mon+Thu+Sat+scrape|84000|year|1"
+  "Pro+Weekly|Weekly+Mon+Thu+Sat+scrape|1200|week|1"
+  "Pro|Monthly+Mon+Thu+Sat+scrape|2900|month|1"
+  "Pro+Quarterly|Quarterly+Mon+Thu+Sat+scrape|7500|month|3"
+  "Pro+Annual|Annual+Mon+Thu+Sat+scrape|24000|year|1"
   # Elite
-  "Elite+Weekly|Weekly+Daily+scrape|5000|week|1"
-  "Elite|Monthly+Daily+scrape|19700|month|1"
-  "Elite+Quarterly|Quarterly+Daily+scrape|50000|month|3"
-  "Elite+Annual|Annual+Daily+scrape|160000|year|1"
+  "Elite+Weekly|Weekly+Daily+scrape|2400|week|1"
+  "Elite|Monthly+Daily+scrape|5900|month|1"
+  "Elite+Quarterly|Quarterly+Daily+scrape|15000|month|3"
+  "Elite+Annual|Annual+Daily+scrape|48000|year|1"
 )
 
 VARS=(

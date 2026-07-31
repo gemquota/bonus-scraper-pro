@@ -13,3 +13,48 @@
   📊 Stripe Webhook:    POST /payments/webhook
   📖 Docs:              /docs
 
+SyntaxError: Unexpected token '{' in /data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/views/pages/pricing.ejs while compiling ejs
+
+If the above error is not helpful, you may want to try EJS-Lint:
+https://github.com/RyanZim/EJS-Lint
+Or, if you meant to create an async function, pass `async: true` as an option.
+    at new Function (<anonymous>)
+    at Template.compile (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:607:18)
+    at Object.compile (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:359:18)
+    at handleCache (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:216:16)
+    at tryHandleCache (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:253:22)
+    at ejs.renderFile [as engine] (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:444:12)
+    at View.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/view.js:139:8)
+    at tryRender (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/application.js:627:10)
+    at app.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/application.js:574:3)
+    at ServerResponse.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/response.js:923:7)
+SyntaxError: Unexpected token '{' in /data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/views/pages/pricing.ejs while compiling ejs
+
+If the above error is not helpful, you may want to try EJS-Lint:
+https://github.com/RyanZim/EJS-Lint
+Or, if you meant to create an async function, pass `async: true` as an option.
+    at new Function (<anonymous>)
+    at Template.compile (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:607:18)
+    at Object.compile (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:359:18)
+    at handleCache (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:216:16)
+    at tryHandleCache (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:253:22)
+    at ejs.renderFile [as engine] (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:444:12)
+    at View.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/view.js:139:8)
+    at tryRender (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/application.js:627:10)
+    at app.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/application.js:574:3)
+    at ServerResponse.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/response.js:923:7)
+SyntaxError: Unexpected token '{' in /data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/views/pages/pricing.ejs while compiling ejs
+
+If the above error is not helpful, you may want to try EJS-Lint:
+https://github.com/RyanZim/EJS-Lint
+Or, if you meant to create an async function, pass `async: true` as an option.
+    at new Function (<anonymous>)
+    at Template.compile (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:607:18)
+    at Object.compile (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:359:18)
+    at handleCache (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:216:16)
+    at tryHandleCache (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:253:22)
+    at ejs.renderFile [as engine] (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/ejs/lib/cjs/ejs.js:444:12)
+    at View.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/view.js:139:8)
+    at tryRender (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/application.js:627:10)
+    at app.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/application.js:574:3)
+    at ServerResponse.render (/data/data/com.termux/files/home/Documents/Codex/2026-07-30/make-me-money/node_modules/express/lib/response.js:923:7)

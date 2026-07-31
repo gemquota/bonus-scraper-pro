@@ -28,9 +28,9 @@
 
     <!-- Tier Cards with period data -->
     <% const tiers = [
-      { id: 'tier1', name: 'Starter', tagline: 'Weekly fresh data', days: 'M', data: 'Standard', prices: { weekly: '$12', monthly: '$47', quarterly: '$120', annual: '$400' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: false },
-      { id: 'tier2', name: 'Pro', tagline: 'Three times a week', days: 'M T T S', data: 'Advanced', prices: { weekly: '$25', monthly: '$97', quarterly: '$250', annual: '$840' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: true },
-      { id: 'tier3', name: 'Elite', tagline: 'Daily data firehose', days: 'M T W T F S S', data: 'Expert', prices: { weekly: '$50', monthly: '$197', quarterly: '$500', annual: '$1,600' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: false },
+      { id: 'tier1', name: 'Starter', tagline: 'Weekly fresh data', days: 'M', data: 'Standard', prices: { weekly: '$6', monthly: '$15', quarterly: '$40', annual: '$120' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: false },
+      { id: 'tier2', name: 'Pro', tagline: 'Three times a week', days: 'M T T S', data: 'Advanced', prices: { weekly: '$12', monthly: '$29', quarterly: '$75', annual: '$240' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: true },
+      { id: 'tier3', name: 'Elite', tagline: 'Daily data firehose', days: 'M T W T F S S', data: 'Expert', prices: { weekly: '$24', monthly: '$59', quarterly: '$150', annual: '$480' }, per: { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' }, featured: false },
     ]; %>
 
     <% tiers.forEach(t => { %>
@@ -66,24 +66,24 @@
       <tr><th>Tier</th><th>Week</th><th>Month</th><th>Quarter</th><th>Annual</th></tr>
       <tr>
         <td><strong>Starter</strong></td>
-        <td>$12/wk</td>
-        <td><strong>$47/mo</strong></td>
-        <td>$120/qtr</td>
-        <td>$400/yr</td>
+        <td>$6/wk</td>
+        <td><strong>$15/mo</strong></td>
+        <td>$40/qtr</td>
+        <td>$120/yr</td>
       </tr>
       <tr>
         <td><strong>Pro</strong></td>
-        <td>$25/wk</td>
-        <td><strong>$97/mo</strong></td>
-        <td>$250/qtr</td>
-        <td>$840/yr</td>
+        <td>$12/wk</td>
+        <td><strong>$29/mo</strong></td>
+        <td>$75/qtr</td>
+        <td>$240/yr</td>
       </tr>
       <tr>
         <td><strong>Elite</strong></td>
-        <td>$50/wk</td>
-        <td><strong>$197/mo</strong></td>
-        <td>$500/qtr</td>
-        <td>$1,600/yr</td>
+        <td>$24/wk</td>
+        <td><strong>$59/mo</strong></td>
+        <td>$150/qtr</td>
+        <td>$480/yr</td>
       </tr>
     </table>
   </div>
@@ -102,7 +102,7 @@ document.querySelectorAll('.pt-btn').forEach(btn => {
     
     document.querySelectorAll('.tier-card').forEach(card => {
       const tier = card.dataset.tier;
-      const prices = <%= JSON.stringify({ tier1: { weekly: '$12', monthly: '$47', quarterly: '$120', annual: '$400' }, tier2: { weekly: '$25', monthly: '$97', quarterly: '$250', annual: '$840' }, tier3: { weekly: '$50', monthly: '$197', quarterly: '$500', annual: '$1,600' } }) %>;
+      const prices = <%= JSON.stringify({ tier1: { weekly: '$6', monthly: '$15', quarterly: '$40', annual: '$120' }, tier2: { weekly: '$12', monthly: '$29', quarterly: '$75', annual: '$240' }, tier3: { weekly: '$24', monthly: '$59', quarterly: '$150', annual: '$480' } }) %>;
       const perLabels = { weekly: '/wk', monthly: '/mo', quarterly: '/qtr', annual: '/yr' };
       
       card.querySelector('.price-amount').textContent = prices[tier][period];
