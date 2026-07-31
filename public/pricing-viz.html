@@ -157,7 +157,7 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
       <div class="slider-grid" id="formulaGridSimple"></div>
       <div class="formula-out" id="formulaOutSimple"></div>
       <div class="plane-wrap" id="planeWrap">
-        <div class="fo-label" style="margin-bottom:6px">Drag any dot to set a scaling factor — X = tier (left → right), Y = price. Monthly dots set that tier's multiple of the tier below (Brokeass dot = base price); weekly / quarterly / annual dots set that period as a % or multiple of monthly. All prices regenerate from the factors.</div>
+        <div class="fo-label" style="margin-bottom:6px">Drag any dot to set a scaling factor — X = tier (left → right), Y = price (log scale). Monthly dots set that tier's multiple of the tier below (Brokeass dot = base price); weekly / quarterly / annual dots set that period as a % or multiple of monthly. All prices regenerate from the factors.</div>
         <div class="legend" style="margin-bottom:8px">
           <span><span class="dot" style="background:#3b82f6"></span>Weekly</span>
           <span><span class="dot" style="background:#a78bfa"></span>Monthly</span>
@@ -733,10 +733,13 @@ function planeGeom() {
   let axisMax = 3000;
   TIERS.forEach(t => PERIODS.forEach(p => { axisMax = Math.max(axisMax, values[t.id][p.id]); }));
   const plotW = w - padL - padR, plotH = h - padT - padB;
+  const minV = 1; // logarithmic price axis, floor at $1
+  const span = Math.log(axisMax / minV);
   return {
-    canvas, w, h, N, axisMax, padL, padR, padT, padB, plotW, plotH,
+    canvas, w, h, N, axisMax, minV, padL, padR, padT, padB, plotW, plotH,
     X: i => padL + (i / (N - 1)) * plotW,
-    Y: v => padT + plotH - (v / axisMax) * plotH,
+    Y: v => padT + plotH - (Math.log(Math.max(minV, v) / minV) / span) * plotH,
+    invY: y => minV * Math.pow(axisMax / minV, (padT + plotH - y) / plotH),
   };
 }
 
@@ -754,18 +757,27 @@ function renderVertexGrid() {
   const price = (i, j) => values[TIERS[i].id][P[j].id];
   const pts = P.map((p, j) => TIERS.map((t, i) => ({ x: g.X(i), y: g.Y(price(i, j)) })));
 
-  // horizontal gridlines + y labels
+  // horizontal log gridlines + y labels (1, 2, 5 x powers of ten)
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  for (let v = 0; v <= g.axisMax; v += 500) {
+  const logTicks = [];
+  for (let e = 0; Math.pow(10, e) <= g.axisMax * 1.001; e++) {
+    const base = Math.pow(10, e);
+    [1, 2, 5].forEach(m => {
+      const v = base * m;
+      if (v >= g.minV && v <= g.axisMax && logTicks.indexOf(v) === -1) logTicks.push(v);
+    });
+  }
+  logTicks.forEach(v => {
     const yy = g.Y(v);
-    ctx.fillStyle = '#6b7280';
+    const major = Math.abs(v - Math.pow(10, Math.round(Math.log10(v)))) < 1e-9;
+    ctx.fillStyle = major ? '#6b7280' : '#4b5563';
     ctx.fillText('$' + v, g.padL - 8, yy);
-    ctx.strokeStyle = 'rgba(139,148,158,0.14)';
+    ctx.strokeStyle = major ? 'rgba(139,148,158,0.18)' : 'rgba(139,148,158,0.09)';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(g.padL, yy); ctx.lineTo(g.w - g.padR, yy); ctx.stroke();
-  }
+  });
 
   // vertical tier guides
   ctx.strokeStyle = 'rgba(139,148,158,0.08)';
@@ -817,7 +829,7 @@ function renderVertexGrid() {
   });
   ctx.fillStyle = '#6b7280';
   ctx.font = '9px sans-serif';
-  ctx.fillText('Drag a dot to set its scaling factor · X = tier, Y = price', g.w / 2, g.h - 8);
+  ctx.fillText('Drag a dot to set its scaling factor · X = tier, Y = price (log)', g.w / 2, g.h - 8);
 
   // price tag while dragging — shows the scaling factor being set
   if (vertexDrag) {
@@ -873,8 +885,7 @@ function setupVertexDrag() {
     const rect = canvas.getBoundingClientRect();
     const px = e.clientX - rect.left, py = e.clientY - rect.top;
     if (vertexDrag) {
-      const raw = (g.padT + g.plotH - py) / g.plotH * g.axisMax;
-      const p = Math.max(1, Math.min(g.axisMax, Math.round(raw)));
+      const p = Math.max(1, Math.min(g.axisMax, Math.round(g.invY(py))));
       const { i, j } = vertexDrag;
       const tier = TIERS[i].id;
       const mCur = values[tier].monthly || 1;
