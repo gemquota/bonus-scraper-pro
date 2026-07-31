@@ -2,14 +2,15 @@ const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const db = require('../db');
 const { getTier, getScrapeDays } = require('../tiers');
+const fs = require('fs');
 
 const router = express.Router();
 
 // GET /sites — browse all casino sites
 router.get('/', requireAuth, (req, res) => {
   const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.customerId);
-  const tier = getTier(customer.subscription_tier || 'trial');
-  const dataLevel = tier.dataLevel;
+  const isSubscribed = customer.subscription_status === 'active';
+  const tier = getTier(isSubscribed ? 'main' : 'trial');
 
   // Search/filter
   const search = req.query.q || '';
@@ -55,10 +56,13 @@ router.get('/', requireAuth, (req, res) => {
     sites, 
     stats,
     tier,
-    dataLevel,
+    isSubscribed,
     search,
     category,
     status,
+    registered: req.query.registered || null,
+    imported: req.query.imported || null,
+    error: req.query.error || null,
   });
 });
 
@@ -67,7 +71,6 @@ router.post('/:id/toggle', requireAuth, (req, res) => {
   const siteId = parseInt(req.params.id);
   const customerId = req.customerId;
 
-  // Check if preference exists
   const existing = db.prepare(
     'SELECT id, enabled FROM customer_sites WHERE customer_id = ? AND site_id = ?'
   ).get(customerId, siteId);
@@ -88,13 +91,10 @@ router.post('/toggle-all', requireAuth, (req, res) => {
   const customerId = req.customerId;
   const enable = req.body.action === 'enable' ? 1 : 0;
 
-  // Use raw SQLite for bulk operation — single transaction
   const rawDb = db.getDb();
   rawDb.run('BEGIN TRANSACTION');
   try {
-    // Delete existing preferences
     rawDb.run('DELETE FROM customer_sites WHERE customer_id = ?', [customerId]);
-    // Insert all sites at once
     rawDb.run(
       'INSERT INTO customer_sites (customer_id, site_id, enabled) SELECT ?, id, ? FROM sites',
       [customerId, enable]
@@ -103,38 +103,24 @@ router.post('/toggle-all', requireAuth, (req, res) => {
   } catch(e) {
     rawDb.run('ROLLBACK');
   }
-  const { getDb } = require('../db');
-  const d = getDb();
-  // Save to disk (bypasses the module's internal save)
-  const fs = require('fs');
+  const d = db.getDb();
   const path = require('path');
-  fs.writeFileSync(
+  const fs2 = require('fs');
+  fs2.writeFileSync(
     path.join(__dirname, '..', '..', 'data', 'app.db'),
     Buffer.from(d.export())
   );
   res.redirect('/sites');
 });
 
-// POST /sites/auto-signup — Elite: auto-register on all sites
+// POST /sites/auto-signup — auto-register on all sites (subscribers only)
 router.post('/auto-signup', requireAuth, async (req, res) => {
   const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.customerId);
-  const tier = getTier(customer.subscription_tier || 'trial');
 
-  if (tier.dataLevel !== 'expert') {
-    return res.status(403).render('pages/sites', {
-      customer,
-      sites: [],
-      stats: { total: 0, with_bonuses: 0, user_enabled_count: 0 },
-      tier,
-      dataLevel: 'basic',
-      search: '',
-      category: '',
-      status: '',
-      error: 'Auto-registration requires Elite tier. Upgrade your plan.',
-    });
+  if (customer.subscription_status !== 'active') {
+    return res.status(403).redirect('/sites?error=subscription+required');
   }
 
-  // Get credentials prefix from the form
   const usernamePrefix = req.body.username_prefix || '';
   const basePassword = req.body.base_password || 'AutoGen123!';
 
@@ -142,12 +128,10 @@ router.post('/auto-signup', requireAuth, async (req, res) => {
     return res.redirect('/sites?error=need_prefix');
   }
 
-  // Queue registrations for all active sites
   const allSites = db.prepare('SELECT id, url, name FROM sites WHERE status = ?').all('active');
   let queued = 0;
 
   for (const site of allSites) {
-    // Check if already queued/registered
     const existing = db.prepare(
       'SELECT id FROM registration_queue WHERE customer_id = ? AND site_id = ? AND status IN (?, ?)'
     ).get(req.customerId, site.id, 'pending', 'completed');
@@ -180,13 +164,9 @@ router.get('/registration-status', requireAuth, (req, res) => {
   res.json(stats);
 });
 
-// GET /sites/seed — seed the sites database from scraper URL list (admin, requires golf path)
+// GET /sites/seed — seed the sites database from scraper URL list
 router.get('/seed', requireAuth, (req, res) => {
   const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.customerId);
-  // Allow seeding if user has any subscription
-  if (customer.subscription_status !== 'active' && customer.subscription_tier === 'trial') {
-    return res.status(403).send('Not authorized');
-  }
 
   const urlsPath = '/data/data/com.termux/files/home/dev/codex/golf/in/config/urls.txt';
   let imported = 0;
@@ -197,7 +177,6 @@ router.get('/seed', requireAuth, (req, res) => {
       .map(l => l.trim())
       .filter(l => l && l.startsWith('http'));
 
-    // Bulk insert using raw db
     const rawDb = db.getDb();
     rawDb.run('BEGIN TRANSACTION');
     let count = 0;
@@ -210,7 +189,6 @@ router.get('/seed', requireAuth, (req, res) => {
       } catch(e) {}
     }
     rawDb.run('COMMIT');
-    // Save to disk
     const path = require('path');
     const fs2 = require('fs');
     fs2.writeFileSync(
@@ -224,8 +202,5 @@ router.get('/seed', requireAuth, (req, res) => {
 
   res.redirect(`/sites?imported=${imported}`);
 });
-
-// Require fs for seed route
-const fs = require('fs');
 
 module.exports = router;

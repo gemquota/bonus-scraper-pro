@@ -7,21 +7,19 @@ const config = require('../config');
 const router = express.Router();
 
 router.get('/signup', (req, res) => {
-  const tier = req.query.tier || null;
-  res.render('pages/signup', { error: null, tier });
+  res.render('pages/signup', { error: null });
 });
 
 router.get('/login', (req, res) => {
-  const tier = req.query.tier || null;
-  res.render('pages/login', { error: null, registered: req.query.registered || false, tier });
+  res.render('pages/login', { error: null, registered: req.query.registered || false });
 });
 
 router.post('/signup', (req, res) => {
-  const { name, email, password, tier } = req.body;
-  if (!email || !password) return res.render('pages/signup', { error: 'Email and password required', tier: tier || null });
+  const { name, email, password } = req.body;
+  if (!email || !password) return res.render('pages/signup', { error: 'Email and password required' });
   
   if (db.prepare('SELECT id FROM customers WHERE email = ?').get(email)) {
-    return res.render('pages/signup', { error: 'Email already registered', tier: tier || null });
+    return res.render('pages/signup', { error: 'Email already registered' });
   }
   
   const hash = bcrypt.hashSync(password, 10);
@@ -32,25 +30,19 @@ router.post('/signup', (req, res) => {
   const token = jwt.sign({ id: customer.id, email: customer.email }, config.jwtSecret, { expiresIn: '7d' });
   res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
   
-  // If a tier was specified, redirect to checkout
-  if (tier && ['tier1','tier2','tier3'].includes(tier)) {
-    return res.redirect(`/pricing?checkout=${tier}`);
-  }
-  res.redirect('/dashboard');
+  // Redirect to pricing to choose plan
+  res.redirect('/pricing');
 });
 
 router.post('/login', (req, res) => {
-  const { email, password, tier } = req.body;
+  const { email, password } = req.body;
   const customer = db.prepare('SELECT * FROM customers WHERE email = ?').get(email);
   if (!customer || !bcrypt.compareSync(password, customer.password)) {
-    return res.render('pages/login', { error: 'Invalid email or password', registered: false, tier: tier || null });
+    return res.render('pages/login', { error: 'Invalid email or password', registered: false });
   }
   const token = jwt.sign({ id: customer.id, email: customer.email }, config.jwtSecret, { expiresIn: '7d' });
   res.cookie('token', token, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
   
-  if (tier && ['tier1','tier2','tier3'].includes(tier)) {
-    return res.redirect(`/pricing?checkout=${tier}`);
-  }
   res.redirect('/dashboard');
 });
 

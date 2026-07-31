@@ -1,61 +1,77 @@
-# 🕸️ Bonus Scraper Pro
+# Bonus Scraper Pro — Subscription & License Server
 
-**Subscription & License Management** for the Bonus Scraper Engine.
+Stripe subscription management + license validation layer for the Bonus Scraper engine.
 
-Scrape casino bonus offers on your schedule. Three tiers — pay how you want.
+## Single Plan Pricing
 
-## Tiers
+| Period | Price | Effective /mo |
+|--------|-------|--------------|
+| Weekly | $6/wk | $26/mo |
+| Monthly | $20/mo | $20/mo |
+| Quarterly | $50/qtr | $17/mo |
+| Annual | $180/yr | $15/mo |
 
-| Tier | Price | Schedule | Data Level |
-|------|-------|----------|------------|
-| **Starter** | $47/mo ($12/wk · $120/qtr · $400/yr) | Monday | Standard (CSV) |
-| **Pro** | $97/mo ($25/wk · $250/qtr · $840/yr) | Mon + Thu + Sat | Advanced (CSV+JSON, scoring) |
-| **Elite** | $197/mo ($50/wk · $500/qtr · $1,600/yr) | Daily | Expert (all formats, raw, FTS) |
+**Free first month trial** on the monthly plan only. No free tier — just a free month.
 
-**Free first month on Starter.** Cancel anytime.
+## What's Included
 
-## Key Features
-
-- **Account Portal** — Manage casino credentials, enable/disable scrape targets
-- **Sites Database** — Browse 1,000+ casino sites with merchant details
-- **License Validation API** — Scraper validates your license on startup
-- **Config Sync** — Auto-generate `config.ini` from your saved accounts + sites
-- **Elite Auto-Registration** — Generate accounts on all casino sites automatically
-- **Background Worker** — Processes registration queue & syncs scraper data
-- **Multi-Period Billing** — Weekly, monthly, quarterly, annual via Stripe
+- **1,000+ casino sites** scraped daily
+- **Expert data level** — most detailed bonus information
+- **CSV + JSON + Raw** export formats
+- **Full-text search** across all scraped data
+- **Value scoring** — ranked bonuses by value
+- **Filtered export** — narrow down by criteria
+- **Custom fields** — bring your own data schema
+- **Auto-registration** — we create accounts on all casino sites for you
+- **Priority support** — email and chat
 
 ## Quick Start
 
 ```bash
-# 1. Install dependencies
+# Install dependencies
 npm install
 
-# 2. Set up Stripe products
+# Set up Stripe (creates 4 price IDs)
 export STRIPE_SECRET_KEY=sk_live_...
 bash scripts/01-setup-stripe.sh
 
-# 3. Set webhook secret
-# Stripe Dashboard → Webhooks → Add endpoint → /payments/webhook
+# Set webhook secret in .env
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-# 4. Start server
+# Start
 npm start
 ```
 
 ## API
 
-| Endpoint | Description |
-|----------|-------------|
-| `POST /api/license/validate` | Validate a license key |
-| `GET /api/license/features/:tier` | Get tier features |
-| `GET /api/sync-config` | Generate config.ini from your profile |
-| `GET /api/sync-config/download` | Download config.ini |
+- `POST /api/license/validate` — validate a license key, returns tier/data/scrape schedule
+- `GET /api/license/status?key=...` — quick license status check
+- `POST /payments/webhook` — Stripe webhook receiver
+- `POST /payments/checkout/main?period=monthly` — create Stripe checkout session
+- `GET /api/sync-config` — generate config.ini from user's casino accounts + enabled sites
 
 ## Architecture
 
+- **Express** web server with EJS templates
+- **sql.js** (SQLite via WebAssembly) for user/account/site data
+- **Stripe** for subscription billing and payment processing
+- **Background worker** processes registration queue and syncs scraper data
+
+## Setup Stripe
+
+1. Create a Stripe account at https://dashboard.stripe.com
+2. Get your secret key: `sk_live_...`
+3. Run the setup script to create 4 prices:
+
+```bash
+STRIPE_SECRET_KEY=sk_live_... bash scripts/01-setup-stripe.sh
 ```
-User → Website (Express) → Stripe Checkout → Webhook → License Created
-                                                         ↓
-Scraper (Python) → POST /api/license/validate → Returns tier + credentials + sites
-                                                         ↓
-                                              Enforces schedule & data level
-```
+
+4. Configure the webhook endpoint in Stripe Dashboard:
+   - Endpoint: `https://your-app.com/payments/webhook`
+   - Events: `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`, `customer.subscription.updated`
+   - Copy the signing secret to `STRIPE_WEBHOOK_SECRET` in `.env`
+
+## Deployment
+
+The server is designed to run alongside the Python scraper engine.

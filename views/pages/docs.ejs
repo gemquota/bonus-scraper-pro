@@ -14,27 +14,27 @@
     <p>The scraper reads your license from the <code>SCRAPER_LICENSE_KEY</code> environment variable:</p>
     <pre><code>export SCRAPER_LICENSE_KEY="SCRPR-XXXXXXXX-XXXXXXXX-XXXXXXXX"
 python3 main.py</code></pre>
-    <p>On each startup, the scraper validates your license against our server. If today matches your tier's schedule, it runs a full scrape. Otherwise it skips.</p>
+    <p>On each startup, the scraper validates your license against our server. Subscribers get daily scrapes with expert data.</p>
   </div>
 
   <div class="doc-section">
-    <h2>📋 3. Tier Comparison</h2>
+    <h2>📋 3. What You Get</h2>
+    <p>One plan. Full access. All features included:</p>
     <table class="doc-table">
-      <tr><th>Feature</th><th>Starter</th><th>Pro</th><th>Elite</th></tr>
-      <tr><td>Price</td><td><strong>$47/mo</strong></td><td><strong>$97/mo</strong></td><td><strong>$197/mo</strong></td></tr>
-      <tr><td>Scrape Days</td><td>Monday</td><td>Mon + Thu + Sat</td><td>Daily</td></tr>
-      <tr><td>Scrapes/week</td><td>1</td><td>3</td><td>7</td></tr>
-      <tr><td>Data Level</td><td>Standard</td><td>Advanced</td><td>Expert</td></tr>
-      <tr><td>CSV Export</td><td>✓</td><td>✓</td><td>✓</td></tr>
-      <tr><td>JSON Export</td><td>✕</td><td>✓</td><td>✓</td></tr>
-      <tr><td>Value Scoring</td><td>✕</td><td>✓</td><td>✓</td></tr>
-      <tr><td>Filtered Export</td><td>✕</td><td>✓</td><td>✓</td></tr>
-      <tr><td>Full-Text Search</td><td>✕</td><td>✕</td><td>✓</td></tr>
-      <tr><td>Raw Data Access</td><td>✕</td><td>✕</td><td>✓</td></tr>
-      <tr><td>Custom Fields</td><td>✕</td><td>✕</td><td>✓</td></tr>
-      <tr><td>Priority Support</td><td>✕</td><td>✕</td><td>✓</td></tr>
+      <tr><th>Feature</th><th>Trial</th><th>Subscriber</th></tr>
+      <tr><td>Scrape Days</td><td>Monday only</td><td>Daily</td></tr>
+      <tr><td>Data Level</td><td>Standard</td><td>Expert</td></tr>
+      <tr><td>CSV Export</td><td>✓</td><td>✓</td></tr>
+      <tr><td>JSON Export</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Value Scoring</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Filtered Export</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Full-Text Search</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Raw Data Access</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Custom Fields</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Priority Support</td><td>✕</td><td>✓</td></tr>
+      <tr><td>Auto-Registration</td><td>✕</td><td>✓</td></tr>
     </table>
-    <p style="margin-top:12px;color:var(--text-muted);font-size:0.85rem">All plans include a <strong>free first month</strong>. Cancel anytime before your first bill.</p>
+    <p style="margin-top:12px;color:var(--text-muted);font-size:0.85rem"><strong>Free first month</strong> on the monthly plan. Cancel anytime.</p>
   </div>
 
   <div class="doc-section">
@@ -73,8 +73,8 @@ python3 run_scraper.py > data.csv</code></pre>
     <h2>❓ 6. Troubleshooting</h2>
     <table class="doc-table">
       <tr><td><strong>License server unreachable</strong></td><td>The scraper falls back to cached license data (valid for 1 hour) or free trial mode. Set <code>LICENSE_SERVER_URL</code> env var if your server isn't at localhost.</td></tr>
-      <tr><td><strong>Scraper skips when I want it to run</strong></td><td>Check today is in your tier's schedule. The scraper only runs full scrapes on scheduled days.</td></tr>
-      <tr><td><strong>How do I upgrade?</strong></td><td>Go to your Dashboard → Manage Billing. Stripe handles prorated upgrades.</td></tr>
+      <tr><td><strong>Scraper skips when I want it to run</strong></td><td>Subscribers get daily scrapes. If you're on the free trial, scrapes run on Monday only.</td></tr>
+      <tr><td><strong>How do I manage billing?</strong></td><td>Go to your Dashboard → Manage Billing. Stripe handles plan changes and cancellations.</td></tr>
     </table>
   </div>
 </section>

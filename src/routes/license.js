@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../db');
-const { getTier, getScrapeDays, getFeatureList } = require('../tiers');
+const { getTier, getScrapeDays } = require('../tiers');
 const fs = require('fs');
 const path = require('path');
 
@@ -22,7 +22,6 @@ router.post('/validate', (req, res) => {
   const { license_key } = req.body;
   
   if (!license_key) {
-    // Still give free trial tier for unlicensed use
     return res.json({
       valid: false,
       tier: 'trial',
@@ -82,7 +81,7 @@ router.post('/validate', (req, res) => {
     tier: license.tier,
     tierName: tierConfig.name,
     scrapeDays,
-    dataLevel: license.tier === 'tier3' ? 'expert' : license.tier === 'tier2' ? 'advanced' : 'basic',
+    dataLevel: 'expert',
     features,
     customerEmail: license.email,
     scrapesToday,
@@ -112,7 +111,7 @@ router.post('/validate', (req, res) => {
     tier: license.tier,
     tier_name: tierConfig.name,
     scrape_days: scrapeDays,
-    data_level: license.tier === 'tier3' ? 'expert' : license.tier === 'tier2' ? 'advanced' : 'basic',
+    data_level: 'expert',
     data_label: tierConfig.dataLabel,
     schedule_label: tierConfig.scheduleLabel,
     scrape_today: scrapesToday,
@@ -150,11 +149,9 @@ router.get('/features/:tier', (req, res) => {
   res.json({
     tier: req.params.tier,
     name: tier.name,
-    price: tier.price,
     scrapeDays: tier.scrapeDays,
     dataLevel: tier.dataLevel,
     scheduleLabel: tier.scheduleLabel,
-    features: getFeatureList(req.params.tier),
   });
 });
 

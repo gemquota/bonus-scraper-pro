@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.get('/', requireAuth, (req, res) => {
   const customer = db.prepare('SELECT * FROM customers WHERE id = ?').get(req.customerId);
+  const isSubscribed = customer.subscription_status === 'active';
   const license = db.prepare('SELECT * FROM licenses WHERE customer_id = ? ORDER BY created_at DESC').get(req.customerId);
   const payments = db.prepare('SELECT * FROM payments WHERE customer_id = ? ORDER BY created_at DESC LIMIT 10').all(req.customerId);
   
@@ -18,8 +19,8 @@ router.get('/', requireAuth, (req, res) => {
     AND date >= date('now', 'start of month')
   `).get(req.customerId);
   
-  const tier = getTier(customer.subscription_tier || 'free');
-  const features = getFeatureList(customer.subscription_tier || 'free');
+  const tier = getTier(isSubscribed ? 'main' : 'trial');
+  const features = getFeatureList(isSubscribed ? 'main' : 'trial');
   
   res.render('pages/dashboard', { customer, license, payments, usage, tier, features, checkout: req.query.checkout });
 });

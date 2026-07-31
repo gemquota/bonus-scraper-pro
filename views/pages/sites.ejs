@@ -35,10 +35,10 @@
     </div>
   </div>
 
-  <!-- Elite Auto-Registration -->
-  <% if (tier && tier.dataLevel === 'expert') { %>
+  <!-- Auto-Registration (all subscribers) -->
+  <% if (locals.isSubscribed) { %>
   <div class="dc elite-card">
-    <h3>🤖 Auto-Registration <span class="elite-badge">ELITE</span></h3>
+    <h3>🤖 Auto-Registration</h3>
     <p class="help">Generate accounts on all active casino sites automatically. Provide a username prefix and the base password.</p>
     <form method="POST" action="/sites/auto-signup" class="auto-signup-form">
       <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
@@ -126,7 +126,6 @@ document.querySelector('.auto-signup-form')?.addEventListener('submit', async (e
 .search-input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); font-size: 0.85rem; }
 .bulk-actions { display: flex; gap: 6px; }
 .elite-card { margin-bottom: 20px; }
-.elite-badge { background: linear-gradient(135deg, #f39c12, #e74c3c); color: #fff; padding: 2px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; vertical-align: middle; margin-left: 6px; }
 .auto-signup-form .fg { margin-bottom: 0; }
 .auto-signup-form label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 2px; }
 .auto-signup-form input { width: 100%; padding: 8px 10px; font-size: 0.85rem; }
