@@ -26,10 +26,10 @@ function save() {
 }
 
 async function init() {
-  // sql.js needs its WASM binary; on serverless the default lookup fails,
-  // so point it at the copy we ship in public/ (readable, not writable).
-  const wasmPath = path.join(__dirname, '..', 'public', 'sql-wasm.wasm');
-  const SQL = await initSqlJs({ locateFile: () => wasmPath });
+  // sql.js needs its WASM binary; serverless bundles may not include .wasm
+  // files, so use the base64-embedded copy (guaranteed to be in the bundle).
+  const wasmBinary = require('./sql-wasm-b64');
+  const SQL = await initSqlJs({ wasmBinary });
   if (fs.existsSync(dbPath)) {
     db = new SQL.Database(fs.readFileSync(dbPath));
   } else {

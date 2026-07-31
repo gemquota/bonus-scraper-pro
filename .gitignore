@@ -12,3 +12,4 @@ update_golf_main.py
 tun*.log
 tunnel.log
 *.log
+.vercel
