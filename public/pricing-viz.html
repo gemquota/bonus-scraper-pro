@@ -91,6 +91,8 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 .chip.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 .variant-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.45; }
 .variant-desc strong { color: var(--text); }
+.formula-out { margin-top: 12px; font-size: 0.85rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+.formula-out .fo-label { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
 
 /* Growth */
 .growth-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -114,10 +116,18 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 
   <!-- Pricing variants -->
   <div class="card">
-    <h2>Pricing Variants <span class="snap-badge">10 STRATEGIES</span></h2>
+    <h2>Pricing Variants <span class="snap-badge">20 STRATEGIES</span></h2>
     <p class="sub" style="margin-bottom:14px">One-click load of the 10 variant pricing structures. Pick one, then fine-tune with the sliders or the grid below.</p>
     <div class="variant-chips" id="variantChips"></div>
     <div class="variant-desc" id="variantDesc"></div>
+  </div>
+
+  <!-- Formula builder -->
+  <div class="card">
+    <h2>Formula Builder <span class="snap-badge">SHAPES THE PRICING FUNCTION</span></h2>
+    <p class="sub" style="margin-bottom:14px">Control the function behind the prices — the base monthly price, how much each tier costs relative to the one below, and how Weekly / Quarterly / Annual scale from Monthly. Resulting prices snap to whole dollars.</p>
+    <div class="slider-grid" id="formulaGrid"></div>
+    <div class="formula-out" id="formulaOut"></div>
   </div>
 
   <!-- Quick-set sliders -->
@@ -318,6 +328,26 @@ const VARIANTS = [
     values: { tier1: { weekly: 5, monthly: 18, quarterly: 45, annual: 162 }, tier2: { weekly: 8, monthly: 25, quarterly: 63, annual: 225 }, tier3: { weekly: 23, monthly: 75, quarterly: 188, annual: 675 } } },
   { id: 'v10', name: '10 · Commitment', strategy: 'Rewards commitment at every step — annual is ~48% off vs weekly. Good for retention.',
     values: { tier1: { weekly: 7, monthly: 22, quarterly: 55, annual: 190 }, tier2: { weekly: 14, monthly: 45, quarterly: 110, annual: 380 }, tier3: { weekly: 28, monthly: 90, quarterly: 220, annual: 760 } } },
+  { id: 'v11', name: '11 · Flat Weekly', strategy: 'No discount for longer periods — monthly is exactly 4x weekly, so the price story is completely transparent.',
+    values: { tier1: { weekly: 5, monthly: 20, quarterly: 60, annual: 240 }, tier2: { weekly: 12, monthly: 48, quarterly: 144, annual: 576 }, tier3: { weekly: 25, monthly: 100, quarterly: 300, annual: 1200 } } },
+  { id: 'v12', name: '12 · Trial Pusher', strategy: 'Monthly is ~46% cheaper than weekly — weekly trials convert to monthly, monthly converts to annual.',
+    values: { tier1: { weekly: 7, monthly: 15, quarterly: 40, annual: 140 }, tier2: { weekly: 14, monthly: 30, quarterly: 80, annual: 280 }, tier3: { weekly: 28, monthly: 60, quarterly: 160, annual: 560 } } },
+  { id: 'v13', name: '13 · Power User', strategy: 'Pro is a small +50% step for 3x the scrapes; Elite is the big +200% jump for power users.',
+    values: { tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 180 }, tier2: { weekly: 9, monthly: 30, quarterly: 75, annual: 270 }, tier3: { weekly: 27, monthly: 90, quarterly: 225, annual: 810 } } },
+  { id: 'v14', name: '14 · Data Tier', strategy: 'Price is transparently the data tier — +$18 for Advanced, +$40 for Expert, on top of a $12 Standard base.',
+    values: { tier1: { weekly: 4, monthly: 12, quarterly: 30, annual: 108 }, tier2: { weekly: 9, monthly: 30, quarterly: 75, annual: 270 }, tier3: { weekly: 21, monthly: 70, quarterly: 175, annual: 630 } } },
+  { id: 'v15', name: '15 · Volume Discount', strategy: 'Every longer period is progressively cheaper — annual is ~22% off monthly. Rewards commitment without going deep-discount.',
+    values: { tier1: { weekly: 6, monthly: 20, quarterly: 48, annual: 168 }, tier2: { weekly: 12, monthly: 38, quarterly: 92, annual: 320 }, tier3: { weekly: 23, monthly: 72, quarterly: 175, annual: 610 } } },
+  { id: 'v16', name: '16 · Reverse Decoy', strategy: 'Elite is only +33% over Pro — the top tier looks like the deal, so upgrades flow to the most profitable plan.',
+    values: { tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 180 }, tier2: { weekly: 14, monthly: 45, quarterly: 113, annual: 405 }, tier3: { weekly: 18, monthly: 60, quarterly: 150, annual: 540 } } },
+  { id: 'v17', name: '17 · Clean Weekly', strategy: 'Weekly prices are round and feel cheap; monthly/quarterly/annual use odd endings to maximize perceived savings.',
+    values: { tier1: { weekly: 5, monthly: 17, quarterly: 43, annual: 153 }, tier2: { weekly: 10, monthly: 35, quarterly: 88, annual: 315 }, tier3: { weekly: 20, monthly: 70, quarterly: 175, annual: 630 } } },
+  { id: 'v18', name: '18 · Pure Multiples', strategy: 'Pure arithmetic — quarter is exactly 3x monthly, year is exactly 12x monthly. Zero discount, zero confusion.',
+    values: { tier1: { weekly: 5, monthly: 20, quarterly: 60, annual: 240 }, tier2: { weekly: 10, monthly: 40, quarterly: 120, annual: 480 }, tier3: { weekly: 20, monthly: 80, quarterly: 240, annual: 960 } } },
+  { id: 'v19', name: '19 · Elite Magnet', strategy: 'Annual discount is deepest at Elite (~33% off) — the most valuable users are also the most locked in.',
+    values: { tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 180 }, tier2: { weekly: 11, monthly: 35, quarterly: 88, annual: 315 }, tier3: { weekly: 22, monthly: 70, quarterly: 175, annual: 560 } } },
+  { id: 'v20', name: '20 · Starter Saver', strategy: 'Starter is a $4/wk foot-in-the-door; Pro/Elite carry the margin for power users.',
+    values: { tier1: { weekly: 4, monthly: 18, quarterly: 45, annual: 160 }, tier2: { weekly: 12, monthly: 40, quarterly: 100, annual: 360 }, tier3: { weekly: 24, monthly: 80, quarterly: 200, annual: 720 } } },
 ];
 
 let values = JSON.parse(JSON.stringify(DEFAULTS));
@@ -358,7 +388,7 @@ function convert(tier, from, to) {
 function renderVariants() {
   const wrap = document.getElementById('variantChips');
   wrap.innerHTML = '';
-  VARIANTS.forEach(v => {
+  VARIANTS.filter(v => v.id !== 'formula').forEach(v => {
     const b = document.createElement('button');
     b.className = 'chip' + (v.id === currentVariant ? ' active' : '');
     b.textContent = v.name;
@@ -375,6 +405,7 @@ function applyVariant(id) {
   currentVariant = id;
   renderInputs();
   renderSliders();
+  syncFormulaFromValues();
   saveState();
   renderAll();
   renderVariants();
@@ -382,11 +413,100 @@ function applyVariant(id) {
 }
 
 function updateVariantDesc() {
-  const v = VARIANTS.find(x => x.id === currentVariant);
   const desc = document.getElementById('variantDesc');
-  if (!v || !desc) return;
+  if (!desc) return;
   const sum = TIERS.map(t => '$' + values[t.id].monthly + '/mo').join(' · ');
+  if (currentVariant === 'formula') {
+    desc.innerHTML = '<strong>Custom Formula</strong> — generated live from the Formula Builder sliders. <span style="opacity:.7">(now: ' + sum + ')</span>';
+    return;
+  }
+  const v = VARIANTS.find(x => x.id === currentVariant) || VARIANTS[0];
   desc.innerHTML = '<strong>' + v.name + '</strong> — ' + v.strategy + ' <span style="opacity:.7">(now: ' + sum + ')</span>';
+}
+
+// ---- formula builder -------------------------------------------------------
+const FORMULA_CFG = [
+  { id: 'fBase', label: 'Starter Monthly', min: 1, max: 100, step: 1, fmt: v => '$' + v + ' base' },
+  { id: 'fTier2', label: 'Pro vs Starter', min: 100, max: 300, step: 5, fmt: v => v + '% of Starter' },
+  { id: 'fTier3', label: 'Elite vs Pro', min: 100, max: 300, step: 5, fmt: v => v + '% of Pro' },
+  { id: 'fWk', label: 'Weekly', min: 15, max: 50, step: 1, fmt: v => v + '% of monthly' },
+  { id: 'fQtr', label: 'Quarterly', min: 1.5, max: 4, step: 0.1, fmt: v => v.toFixed(1) + 'x monthly' },
+  { id: 'fYr', label: 'Annual', min: 6, max: 12, step: 0.5, fmt: v => v.toFixed(1) + 'x monthly' },
+];
+let formula = { fBase: 20, fTier2: 175, fTier3: 200, fWk: 30, fQtr: 2.5, fYr: 9 };
+
+function renderFormulaSliders() {
+  const wrap = document.getElementById('formulaGrid');
+  wrap.innerHTML = '';
+  FORMULA_CFG.forEach(cfg => {
+    const block = document.createElement('div');
+    block.className = 'slider-block';
+    block.innerHTML =
+      '<div class="sl-head"><label>' + cfg.label + '</label>' +
+      '<span class="slider-val" id="fval-' + cfg.id + '" style="font-size:1rem">' + cfg.fmt(formula[cfg.id]) + '</span></div>' +
+      '<input type="range" id="fslider-' + cfg.id + '" min="' + cfg.min + '" max="' + cfg.max + '" step="' + cfg.step + '" value="' + formula[cfg.id] + '">';
+    wrap.appendChild(block);
+    document.getElementById('fslider-' + cfg.id).addEventListener('input', e => {
+      formula[cfg.id] = parseFloat(e.target.value);
+      document.getElementById('fval-' + cfg.id).textContent = cfg.fmt(formula[cfg.id]);
+      applyFormula();
+    });
+  });
+  updateFormulaOut();
+}
+
+function syncFormulaFromValues() {
+  const m1 = values.tier1.monthly || 1;
+  const m2 = values.tier2.monthly || 1;
+  const m3 = values.tier3.monthly || 1;
+  formula.fBase = m1;
+  formula.fTier2 = Math.max(100, Math.min(300, Math.round(m2 / m1 * 100 / 5) * 5));
+  formula.fTier3 = Math.max(100, Math.min(300, Math.round(m3 / m2 * 100 / 5) * 5));
+  formula.fWk = Math.max(15, Math.min(50, Math.round(values.tier1.weekly / m1 * 100)));
+  formula.fQtr = Math.max(1.5, Math.min(4, Math.round(values.tier1.quarterly / m1 * 10) / 10));
+  formula.fYr = Math.max(6, Math.min(12, Math.round(values.tier1.annual / m1 * 2) / 2));
+  FORMULA_CFG.forEach(cfg => {
+    const el = document.getElementById('fslider-' + cfg.id);
+    const valEl = document.getElementById('fval-' + cfg.id);
+    if (el) el.value = formula[cfg.id];
+    if (valEl) valEl.textContent = cfg.fmt(formula[cfg.id]);
+  });
+  updateFormulaOut();
+}
+
+function applyFormula() {
+  const ms = [formula.fBase, 0, 0];
+  ms[1] = Math.max(1, Math.round(ms[0] * formula.fTier2 / 100));
+  ms[2] = Math.max(1, Math.round(ms[1] * formula.fTier3 / 100));
+  TIERS.forEach((t, i) => {
+    const m = ms[i];
+    values[t.id].monthly = m;
+    values[t.id].weekly = Math.max(1, Math.round(m * formula.fWk / 100));
+    values[t.id].quarterly = Math.max(3, Math.round(m * formula.fQtr));
+    values[t.id].annual = Math.max(12, Math.round(m * formula.fYr));
+  });
+  currentVariant = 'formula';
+  renderInputs();
+  renderSliders();
+  saveState();
+  renderAll();
+  renderVariants();
+  updateFormulaOut();
+}
+
+function updateFormulaOut() {
+  const out = document.getElementById('formulaOut');
+  if (!out) return;
+  const m1 = formula.fBase;
+  const m2 = Math.max(1, Math.round(m1 * formula.fTier2 / 100));
+  const m3 = Math.max(1, Math.round(m2 * formula.fTier3 / 100));
+  const wk = v => Math.max(1, Math.round(v * formula.fWk / 100));
+  const qtr = v => Math.max(3, Math.round(v * formula.fQtr));
+  const yr = v => Math.max(12, Math.round(v * formula.fYr));
+  out.innerHTML = '<div class="fo-label">Monthly output from this formula</div>' +
+    'Starter <strong>$' + m1 + '</strong> (wk $' + wk(m1) + ' · qtr $' + qtr(m1) + ' · yr $' + yr(m1) + ')' +
+    ' &nbsp;·&nbsp; Pro <strong>$' + m2 + '</strong> (wk $' + wk(m2) + ' · qtr $' + qtr(m2) + ' · yr $' + yr(m2) + ')' +
+    ' &nbsp;·&nbsp; Elite <strong>$' + m3 + '</strong> (wk $' + wk(m3) + ' · qtr $' + qtr(m3) + ' · yr $' + yr(m3) + ')';
 }
 
 // ---- quick-set sliders ----------------------------------------------------
@@ -791,6 +911,7 @@ function resetDefaults() {
   values = JSON.parse(JSON.stringify(DEFAULTS));
   currentVariant = 'current';
   renderInputs();
+  syncFormulaFromValues();
   saveState();
   renderAll();
   renderVariants();
@@ -1172,6 +1293,8 @@ function renderAll() {
 loadState();
 renderInputs();
 renderSliders();
+renderFormulaSliders();
+syncFormulaFromValues();
 renderVariants();
 renderLegend();
 renderAll();
