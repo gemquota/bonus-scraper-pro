@@ -84,6 +84,14 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 .snap-badge { background: var(--green); color: #fff; font-size: 0.6rem; padding: 2px 8px; border-radius: 12px; vertical-align: middle; font-weight: 700; letter-spacing: 0.5px; }
 @media (max-width: 860px) { .slider-grid { grid-template-columns: 1fr; } }
 
+/* Variants */
+.variant-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.chip { padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.78rem; font-weight: 600; transition: all 0.15s; }
+.chip:hover { border-color: var(--blue); color: var(--text); }
+.chip.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+.variant-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.45; }
+.variant-desc strong { color: var(--text); }
+
 /* Growth */
 .growth-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .heat-grid.cols-3 { grid-template-columns: 90px repeat(3, 1fr); }
@@ -103,6 +111,14 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 <div class="container">
   <h1>📊 Pricing Visualizer</h1>
   <p class="sub">Enter the 12 prices — tables and charts update live. Values persist in the URL.</p>
+
+  <!-- Pricing variants -->
+  <div class="card">
+    <h2>Pricing Variants <span class="snap-badge">10 STRATEGIES</span></h2>
+    <p class="sub" style="margin-bottom:14px">One-click load of the 10 variant pricing structures. Pick one, then fine-tune with the sliders or the grid below.</p>
+    <div class="variant-chips" id="variantChips"></div>
+    <div class="variant-desc" id="variantDesc"></div>
+  </div>
 
   <!-- Quick-set sliders -->
   <div class="card">
@@ -279,7 +295,33 @@ const DEFAULTS = {
   tier3: { weekly: 24, monthly: 70, quarterly: 180, annual: 600 },
 };
 
+const VARIANTS = [
+  { id: 'current', name: 'Current', strategy: 'Baseline — the live defaults (Starter 6/20/50/180 · Pro 12/35/90/300 · Elite 24/70/180/600).',
+    values: { tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 180 }, tier2: { weekly: 12, monthly: 35, quarterly: 90, annual: 300 }, tier3: { weekly: 24, monthly: 70, quarterly: 180, annual: 600 } } },
+  { id: 'v1', name: '1 · 2x Ladder', strategy: 'Every tier is exactly 2x the one below in every period — easiest to explain and defend.',
+    values: { tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 180 }, tier2: { weekly: 12, monthly: 40, quarterly: 100, annual: 360 }, tier3: { weekly: 24, monthly: 80, quarterly: 200, annual: 720 } } },
+  { id: 'v2', name: '2 · Charm Pricing', strategy: 'Left-digit effect — undercuts the round numbers by $1 while keeping weekly prices clean.',
+    values: { tier1: { weekly: 6, monthly: 19, quarterly: 48, annual: 171 }, tier2: { weekly: 12, monthly: 39, quarterly: 98, annual: 351 }, tier3: { weekly: 24, monthly: 79, quarterly: 198, annual: 711 } } },
+  { id: 'v3', name: '3 · Per Scrape', strategy: 'Price scales with output — $6 per scrape (1 / 3 / 7 scrapes per week). Defensible, premium at the top.',
+    values: { tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 180 }, tier2: { weekly: 18, monthly: 60, quarterly: 150, annual: 540 }, tier3: { weekly: 42, monthly: 140, quarterly: 350, annual: 1260 } } },
+  { id: 'v4', name: '4 · Annual First', strategy: 'Deep yearly discount (~17% off) — about 2 months free for paying a year upfront. Best cash flow.',
+    values: { tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 150 }, tier2: { weekly: 12, monthly: 35, quarterly: 90, annual: 260 }, tier3: { weekly: 24, monthly: 70, quarterly: 180, annual: 520 } } },
+  { id: 'v5', name: '5 · Penetration', strategy: 'Starter under $100/yr ($0.25/day) is an impulse buy; Pro/Elite make the real money.',
+    values: { tier1: { weekly: 3, monthly: 10, quarterly: 25, annual: 90 }, tier2: { weekly: 12, monthly: 40, quarterly: 100, annual: 360 }, tier3: { weekly: 27, monthly: 90, quarterly: 225, annual: 810 } } },
+  { id: 'v6', name: '6 · Premium', strategy: 'Positions the tool as a pro business utility — fewer, higher-margin customers.',
+    values: { tier1: { weekly: 9, monthly: 30, quarterly: 75, annual: 270 }, tier2: { weekly: 18, monthly: 60, quarterly: 150, annual: 540 }, tier3: { weekly: 36, monthly: 120, quarterly: 300, annual: 1080 } } },
+  { id: 'v7', name: '7 · Round Numbers', strategy: 'Every number is memorable ($25/$50/$100 monthly) — great for word of mouth.',
+    values: { tier1: { weekly: 8, monthly: 25, quarterly: 63, annual: 225 }, tier2: { weekly: 15, monthly: 50, quarterly: 125, annual: 450 }, tier3: { weekly: 30, monthly: 100, quarterly: 250, annual: 900 } } },
+  { id: 'v8', name: '8 · Weekly Hook', strategy: '$4/wk removes friction to trial the Monday scrape; annual is ~35% cheaper than weekly.',
+    values: { tier1: { weekly: 4, monthly: 15, quarterly: 38, annual: 135 }, tier2: { weekly: 10, monthly: 35, quarterly: 88, annual: 315 }, tier3: { weekly: 22, monthly: 75, quarterly: 188, annual: 675 } } },
+  { id: 'v9', name: '9 · Decoy', strategy: 'Pro is only ~39% over Starter but 3x the features — most buyers pick Pro; Elite anchors the top.',
+    values: { tier1: { weekly: 5, monthly: 18, quarterly: 45, annual: 162 }, tier2: { weekly: 8, monthly: 25, quarterly: 63, annual: 225 }, tier3: { weekly: 23, monthly: 75, quarterly: 188, annual: 675 } } },
+  { id: 'v10', name: '10 · Commitment', strategy: 'Rewards commitment at every step — annual is ~48% off vs weekly. Good for retention.',
+    values: { tier1: { weekly: 7, monthly: 22, quarterly: 55, annual: 190 }, tier2: { weekly: 14, monthly: 45, quarterly: 110, annual: 380 }, tier3: { weekly: 28, monthly: 90, quarterly: 220, annual: 760 } } },
+];
+
 let values = JSON.parse(JSON.stringify(DEFAULTS));
+let currentVariant = 'current';
 
 // ---- helpers -------------------------------------------------------------
 function fmt(n) {
@@ -310,6 +352,41 @@ function convert(tier, from, to) {
     case 'quarterly': return annual / 4;
     case 'annual': return annual;
   }
+}
+
+// ---- pricing variants ------------------------------------------------------
+function renderVariants() {
+  const wrap = document.getElementById('variantChips');
+  wrap.innerHTML = '';
+  VARIANTS.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (v.id === currentVariant ? ' active' : '');
+    b.textContent = v.name;
+    b.onclick = () => applyVariant(v.id);
+    wrap.appendChild(b);
+  });
+  updateVariantDesc();
+}
+
+function applyVariant(id) {
+  const v = VARIANTS.find(x => x.id === id);
+  if (!v) return;
+  values = JSON.parse(JSON.stringify(v.values));
+  currentVariant = id;
+  renderInputs();
+  renderSliders();
+  saveState();
+  renderAll();
+  renderVariants();
+  toast('Loaded: ' + v.name);
+}
+
+function updateVariantDesc() {
+  const v = VARIANTS.find(x => x.id === currentVariant);
+  const desc = document.getElementById('variantDesc');
+  if (!v || !desc) return;
+  const sum = TIERS.map(t => '$' + values[t.id].monthly + '/mo').join(' · ');
+  desc.innerHTML = '<strong>' + v.name + '</strong> — ' + v.strategy + ' <span style="opacity:.7">(now: ' + sum + ')</span>';
 }
 
 // ---- quick-set sliders ----------------------------------------------------
@@ -349,6 +426,7 @@ function applySlider(tierId, monthly) {
   renderSliders();
   saveState();
   renderAll();
+  updateVariantDesc();
 }
 
 function syncSliders() {
@@ -385,6 +463,7 @@ function renderInputs() {
       saveState();
       syncSliders();
       renderAll();
+      updateVariantDesc();
     });
   });
 }
@@ -710,9 +789,11 @@ function toast(msg) {
 }
 function resetDefaults() {
   values = JSON.parse(JSON.stringify(DEFAULTS));
+  currentVariant = 'current';
   renderInputs();
   saveState();
   renderAll();
+  renderVariants();
 }
 
 function renderDiffTable() {
@@ -1091,6 +1172,7 @@ function renderAll() {
 loadState();
 renderInputs();
 renderSliders();
+renderVariants();
 renderLegend();
 renderAll();
 </script>
