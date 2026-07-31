@@ -9,7 +9,7 @@
 :root {
   --bg: #0d1117; --surface: #161b22; --surface-2: #1c2330;
   --border: #2d333b; --text: #e6edf3; --muted: #8b949e;
-  --blue: #3b82f6; --amber: #f59e0b; --green: #10b981;
+  --blue: #3b82f6; --amber: #f59e0b; --green: #10b981; --red: #ef4444;
   --radius: 12px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -45,6 +45,8 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 .pb-table th, .pb-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
 .pb-table th { color: var(--muted); font-weight: 600; }
 .pb-table td.native { color: var(--green); font-weight: 700; }
+.pb-table td.best { color: var(--green); font-weight: 700; }
+.pb-table td.worst { color: var(--red); }
 
 /* Charts */
 .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -102,9 +104,18 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     <div class="tables-grid" id="tablesGrid"></div>
   </div>
 
+  <!-- Per-day -->
+  <div class="card">
+    <h2>3. $ Per Day Comparison</h2>
+    <p class="sub" style="margin-bottom:14px">How much each billing choice actually costs you per day. Annual is always cheapest; weekly is the most expensive. Green = best value per day for that tier, red = worst.</p>
+    <div class="tables-grid">
+      <div class="pb-table" id="perDayTable"></div>
+    </div>
+  </div>
+
   <!-- Charts -->
   <div class="card">
-    <h2>3. Charts</h2>
+    <h2>4. Charts</h2>
     <div class="legend" id="legend"></div>
     <div class="charts-grid">
       <div class="chart-box">
@@ -116,6 +127,11 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
         <h3>Price Heatmap</h3>
         <p class="cap">Colour intensity = price magnitude across all 12 cells.</p>
         <div class="heat-grid" id="heatmap"></div>
+      </div>
+      <div class="chart-box">
+        <h3>Cost Per Day</h3>
+        <p class="cap">Horizontal bars — the cheaper the billing period, the shorter the bar. Volume = $/day.</p>
+        <div class="chart-wrap"><canvas id="perdayChart"></canvas></div>
       </div>
       <div class="chart-box">
         <h3>Bubble Chart</h3>
@@ -155,6 +171,7 @@ const PERIODS = [
   { id: 'quarterly', name: 'Quarterly', short: '/qtr' },
   { id: 'annual', name: 'Annual', short: '/yr' },
 ];
+const DAYS = { weekly: 7, monthly: 365 / 12, quarterly: 365 / 4, annual: 365 };
 
 const DEFAULTS = {
   tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 180 },
@@ -169,8 +186,10 @@ function fmt(n) {
   if (n >= 1000) return '$' + (Math.round(n / 100) / 10).toFixed(1).replace(/\.0$/, '') + 'k';
   return '$' + Math.round(n).toLocaleString();
 }
+function fmtDay(n) {
+  return '$' + n.toFixed(2) + '/day';
+}
 function round1(n) { return Math.max(1, Math.round(n)); }
-function WEEKS_PER_YEAR() { return 52; }
 function toAnnual(tier, period) {
   const v = values[tier][period];
   switch (period) {
@@ -180,7 +199,9 @@ function toAnnual(tier, period) {
     case 'annual': return v;
   }
 }
-// Convert price from `from` period to `to` period
+function perDay(tier, period) {
+  return toAnnual(tier, period) / 365;
+}
 function convert(tier, from, to) {
   const annual = toAnnual(tier, from);
   switch (to) {
@@ -242,6 +263,28 @@ function renderTables() {
   });
 }
 
+function renderPerDay() {
+  const div = document.getElementById('perDayTable');
+  let html = `<h3>Equivalent Cost Per Day</h3><table><tr><th>Billing Period</th>`;
+  TIERS.forEach(t => html += `<th>${t.name}</th>`);
+  html += '</tr>';
+  PERIODS.forEach(p => {
+    html += `<tr><td>${p.name}</td>`;
+    TIERS.forEach(t => {
+      const d = perDay(t.id, p.id);
+      const days = [PERIODS.map(pp => perDay(t.id, pp.id))];
+      const all = days[0];
+      const isBest = d === Math.min(...all);
+      const isWorst = d === Math.max(...all);
+      const cls = isBest ? 'best' : (isWorst ? 'worst' : '');
+      html += `<td class="${cls}">${fmtDay(d)}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  div.innerHTML = html;
+}
+
 // ---- charts ---------------------------------------------------------------
 let charts = {};
 function destroyCharts() {
@@ -293,6 +336,31 @@ function renderHeatmap() {
     });
   });
   wrap.innerHTML = html;
+}
+
+function renderPerDayChart() {
+  const ctx = document.getElementById('perdayChart').getContext('2d');
+  charts.perday = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: PERIODS.map(p => p.name),
+      datasets: TIERS.map(t => ({
+        label: t.name,
+        data: PERIODS.map(p => +perDay(t.id, p.id).toFixed(2)),
+        backgroundColor: t.color,
+        borderRadius: 6,
+      })),
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, beginAtZero: true, title: { display: true, text: 'Cost per day (USD)', color: '#8b949e' } },
+        y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+      },
+    },
+  });
 }
 
 function renderBubble() {
@@ -457,6 +525,16 @@ function copyMarkdown() {
     });
     md += '\n';
   });
+  // Per-day table
+  md += '## Cost Per Day\n| Billing Period | Starter | Pro | Elite |\n|---|---|---|---|\n';
+  PERIODS.forEach(p => {
+    md += `| ${p.name} |`;
+    TIERS.forEach(t => {
+      const d = perDay(t.id, p.id);
+      md += ` ${fmtDay(d)} |`;
+    });
+    md += '\n';
+  });
   navigator.clipboard.writeText(md.trim()).then(() => toast('Markdown tables copied!'));
 }
 function toast(msg) {
@@ -480,8 +558,10 @@ function renderLegend() {
 function renderAll() {
   destroyCharts();
   renderTables();
+  renderPerDay();
   renderBar();
   renderHeatmap();
+  renderPerDayChart();
   renderBubble();
   renderCumulative();
   renderRadar();
