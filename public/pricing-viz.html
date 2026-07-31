@@ -153,11 +153,11 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     </div>
 
     <div class="tab-panel" id="panel-simple">
-      <p class="sub" style="margin-bottom:14px">Two sliders shape the whole pricing function — X = tier curve, Y = period curve. The grid below updates live, and every dot can be dragged straight up or down to set its exact price. Tap any slider value to type one in.</p>
+      <p class="sub" style="margin-bottom:14px">Two sliders shape the whole pricing function — X = tier curve, Y = period curve. The grid below updates live — drag any dot to set a scaling factor, not a literal price: monthly dots set how much that tier costs vs the one below, and weekly/quarterly/annual dots set that period as a share or multiple of monthly. Tap any slider value to type one in.</p>
       <div class="slider-grid" id="formulaGridSimple"></div>
       <div class="formula-out" id="formulaOutSimple"></div>
       <div class="plane-wrap" id="planeWrap">
-        <div class="fo-label" style="margin-bottom:6px">Drag any dot up or down to set that price — X = tier (left → right), Y = price. Each line is one billing period.</div>
+        <div class="fo-label" style="margin-bottom:6px">Drag any dot to set a scaling factor — X = tier (left → right), Y = price. Monthly dots set that tier's multiple of the tier below (Brokeass dot = base price); weekly / quarterly / annual dots set that period as a % or multiple of monthly. All prices regenerate from the factors.</div>
         <div class="legend" style="margin-bottom:8px">
           <span><span class="dot" style="background:#3b82f6"></span>Weekly</span>
           <span><span class="dot" style="background:#a78bfa"></span>Monthly</span>
@@ -619,6 +619,18 @@ function syncFormulaFromValues() {
   updateFormulaOut();
 }
 
+// Push the current formula state into the slider widgets without re-deriving
+// factors from rounded prices (used after grid drags, which set factors directly).
+function syncFormulaUI() {
+  formulaConfig().forEach(cfg => {
+    const el = document.getElementById('fslider-' + cfg.id);
+    const valEl = document.getElementById('fval-' + cfg.id);
+    if (el) el.value = formula[cfg.id];
+    if (valEl) valEl.textContent = cfg.fmt(formula[cfg.id]);
+  });
+  updateFormulaOut();
+}
+
 // live-update scheduler: slider drags update prices instantly, but the heavy
 // chart/tree re-renders are coalesced to one pass per animation frame so the
 // sliders keep responding smoothly while dragging.
@@ -660,6 +672,32 @@ function applyFormulaValues() {
 function applyFormula() {
   applyFormulaValues();
   forceFullUpdate();
+}
+
+// Regenerate all prices from the per-transition scaling factors (mode-independent).
+// Used by grid drags so a single factor edit reshapes the whole curve, then the
+// X/Y sliders are re-synced to the resulting shape.
+function applyVertexValues() {
+  const ms = [formula.fBase];
+  const gs = [formula.g1, formula.g2, formula.g3, formula.g4, formula.g5];
+  for (let i = 1; i < TIERS.length; i++) ms.push(Math.max(1, Math.round(ms[i - 1] * gs[i - 1] / 100)));
+  const pf = { wk: formula.fWk / 100, qtr: formula.fQtr, yr: formula.fYr };
+  TIERS.forEach((t, i) => {
+    const m = ms[i];
+    values[t.id].monthly = m;
+    values[t.id].weekly = Math.max(1, Math.round(m * pf.wk));
+    values[t.id].quarterly = Math.max(3, Math.round(m * pf.qtr));
+    values[t.id].annual = Math.max(12, Math.round(m * pf.yr));
+  });
+  // keep the X/Y sliders in sync with the dragged factors — do NOT re-derive
+  // factors from the rounded prices, that would fight the drag
+  const avg = (formula.g1 + formula.g2 + formula.g3 + formula.g4 + formula.g5) / 5;
+  formula.fX = clampSlider('fX', Math.round(avg / 5) * 5);
+  formula.fY = clampSlider('fY', Math.round((9 - formula.fYr) / 3 * 100));
+  currentVariant = 'formula';
+  syncSliders();
+  syncFormulaUI();
+  scheduleFullUpdate();
 }
 
 function updateFormulaOut() {
@@ -779,16 +817,28 @@ function renderVertexGrid() {
   });
   ctx.fillStyle = '#6b7280';
   ctx.font = '9px sans-serif';
-  ctx.fillText('Drag a dot up or down to set its price · X = tier, Y = price', g.w / 2, g.h - 8);
+  ctx.fillText('Drag a dot to set its scaling factor · X = tier, Y = price', g.w / 2, g.h - 8);
 
-  // price tag while dragging
+  // price tag while dragging — shows the scaling factor being set
   if (vertexDrag) {
     const { i, j } = vertexDrag;
     const pt = pts[j][i];
     ctx.textAlign = 'center';
     ctx.font = 'bold 11px sans-serif';
     ctx.fillStyle = PERIOD_COLORS[P[j].id];
-    ctx.fillText(P[j].name + ' $' + price(i, j), pt.x, Math.max(12, pt.y - 18));
+    let tag;
+    if (j === 1) {
+      tag = i === 0
+        ? TIERS[i].name + ' · $' + price(i, j) + '/mo (base)'
+        : TIERS[i].name + ' · $' + price(i, j) + '/mo (x' + (formula['g' + i] / 100).toFixed(2) + ' vs ' + TIERS[i - 1].name + ')';
+    } else if (j === 0) {
+      tag = TIERS[i].name + ' · $' + price(i, j) + '/wk (' + formula.fWk + '% of monthly)';
+    } else if (j === 2) {
+      tag = TIERS[i].name + ' · $' + price(i, j) + '/qtr (' + formula.fQtr.toFixed(1) + 'x monthly)';
+    } else {
+      tag = TIERS[i].name + ' · $' + price(i, j) + '/yr (' + formula.fYr.toFixed(1) + 'x monthly)';
+    }
+    ctx.fillText(tag, pt.x, Math.max(12, pt.y - 18));
   }
 }
 
@@ -824,14 +874,33 @@ function setupVertexDrag() {
     const px = e.clientX - rect.left, py = e.clientY - rect.top;
     if (vertexDrag) {
       const raw = (g.padT + g.plotH - py) / g.plotH * g.axisMax;
-      const v = Math.max(1, Math.min(g.axisMax, Math.round(raw)));
-      const tier = TIERS[vertexDrag.i].id, period = PERIODS[vertexDrag.j].id;
-      if (v !== values[tier][period]) {
-        values[tier][period] = v;
-        syncSliders();
-        syncFormulaFromValues();
+      const p = Math.max(1, Math.min(g.axisMax, Math.round(raw)));
+      const { i, j } = vertexDrag;
+      const tier = TIERS[i].id;
+      const mCur = values[tier].monthly || 1;
+      let changed = false;
+      if (j === 1) { // monthly dot -> tier scaling factor
+        if (i === 0) {
+          const v = clampSlider('fBase', p);
+          if (v !== formula.fBase) { formula.fBase = v; changed = true; }
+        } else {
+          const prevM = values[TIERS[i - 1].id].monthly || 1;
+          const v = clampSlider('g' + i, Math.round(p / prevM * 100 / 5) * 5);
+          if (v !== formula['g' + i]) { formula['g' + i] = v; changed = true; }
+        }
+      } else if (j === 0) { // weekly dot -> weekly % of monthly
+        const v = clampSlider('fWk', Math.round(p / mCur * 100));
+        if (v !== formula.fWk) { formula.fWk = v; changed = true; }
+      } else if (j === 2) { // quarterly dot -> quarterly multiple of monthly
+        const v = clampSlider('fQtr', Math.round(p / mCur * 10) / 10);
+        if (v !== formula.fQtr) { formula.fQtr = v; changed = true; }
+      } else if (j === 3) { // annual dot -> annual multiple of monthly
+        const v = clampSlider('fYr', Math.round(p / mCur * 2) / 2);
+        if (v !== formula.fYr) { formula.fYr = v; changed = true; }
+      }
+      if (changed) {
+        applyVertexValues();
         renderVertexGrid();
-        scheduleFullUpdate();
       }
       e.preventDefault();
       return;
