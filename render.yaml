@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: bonus-scraper-pro
+    runtime: node
+    repo: https://github.com/gemquota/bonus-scraper-pro
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /pricing
+    envVars:
+      - key: BASE_URL
+        value: https://bonus-scraper-pro.onrender.com
+      - key: JWT_SECRET
+        generateValue: true
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

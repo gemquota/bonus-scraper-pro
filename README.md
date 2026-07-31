@@ -40,3 +40,17 @@ STRIPE_SECRET_KEY=sk_live_... bash scripts/01-setup-stripe.sh
 ```
 
 Creates 12 Stripe prices (3 tiers × 4 periods). Configure webhook at `/payments/webhook`.
+
+
+## One-Click Deploy (Render — recommended)
+
+Vercel's root path is broken on this account (SSO protection bug), so use Render for a stable URL:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/gemquota/bonus-scraper-pro)
+
+1. Click the button (or go to render.com → New → Blueprint → select the repo)
+2. It reads `render.yaml` automatically — no config needed
+3. After deploy: set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in Render Dashboard → Environment
+4. URL: `https://bonus-scraper-pro.onrender.com`
+
+Note: free Render services sleep after 15 min idle and wake on the first request.
