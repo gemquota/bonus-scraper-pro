@@ -93,6 +93,8 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 .variant-desc strong { color: var(--text); }
 .formula-out { margin-top: 12px; font-size: 0.85rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
 .formula-out .fo-label { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+.plane-wrap { margin-top: 14px; }
+.plane-wrap canvas { width: 100%; height: 360px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; display: block; }
 
 /* Growth */
 .growth-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -117,7 +119,7 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
   <!-- Pricing variants -->
   <div class="card">
     <h2>Pricing Variants <span class="snap-badge">20 STRATEGIES</span></h2>
-    <p class="sub" style="margin-bottom:14px">One-click load of the 10 variant pricing structures. Pick one, then fine-tune with the sliders or the grid below.</p>
+    <p class="sub" style="margin-bottom:14px">One-click load of the 20 variant pricing structures. Pick one, then fine-tune with the sliders or the grid below.</p>
     <div class="variant-chips" id="variantChips"></div>
     <div class="variant-desc" id="variantDesc"></div>
   </div>
@@ -126,8 +128,16 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
   <div class="card">
     <h2>Formula Builder <span class="snap-badge">SHAPES THE PRICING FUNCTION</span></h2>
     <p class="sub" style="margin-bottom:14px">Control the function behind the prices — the base monthly price, how much each tier costs relative to the one below, and how Weekly / Quarterly / Annual scale from Monthly. Resulting prices snap to whole dollars.</p>
+    <div class="seg" id="formulaModeSeg" style="margin-bottom:14px">
+      <button class="active" data-mode="advanced">Advanced · 9 Sliders</button>
+      <button data-mode="simple">Simple · X/Y Curve</button>
+    </div>
     <div class="slider-grid" id="formulaGrid"></div>
     <div class="formula-out" id="formulaOut"></div>
+    <div class="plane-wrap" id="planeWrap" hidden>
+      <div class="fo-label" style="margin-bottom:6px">Price plane — X = tier, Y = billing period, height &amp; colour = price</div>
+      <canvas id="planeCanvas"></canvas>
+    </div>
   </div>
 
   <!-- Quick-set sliders -->
@@ -431,20 +441,54 @@ function updateVariantDesc() {
 }
 
 // ---- formula builder -------------------------------------------------------
-const FORMULA_CFG = [
+const FORMULA_ADV = [
   { id: 'fBase', label: 'Brokeass Monthly', min: 1, max: 50, step: 1, fmt: v => '$' + v + ' base' },
-  { id: 'fGrow1', label: 'Early Tier Growth', min: 100, max: 300, step: 5, fmt: v => v + '% (Brokeass→Starter)' },
-  { id: 'fGrow2', label: 'Late Tier Growth', min: 100, max: 300, step: 5, fmt: v => v + '% (Degen→Friend)' },
+  { id: 'g1', label: 'Tier Growth 1', min: 100, max: 300, step: 5, fmt: v => v + '% (Brokeass→Starter)' },
+  { id: 'g2', label: 'Tier Growth 2', min: 100, max: 300, step: 5, fmt: v => v + '% (Starter→Advanced)' },
+  { id: 'g3', label: 'Tier Growth 3', min: 100, max: 300, step: 5, fmt: v => v + '% (Advanced→Expert)' },
+  { id: 'g4', label: 'Tier Growth 4', min: 100, max: 300, step: 5, fmt: v => v + '% (Expert→Degen)' },
+  { id: 'g5', label: 'Tier Growth 5', min: 100, max: 300, step: 5, fmt: v => v + '% (Degen→Friend)' },
   { id: 'fWk', label: 'Weekly', min: 15, max: 50, step: 1, fmt: v => v + '% of monthly' },
   { id: 'fQtr', label: 'Quarterly', min: 1.5, max: 4, step: 0.1, fmt: v => v.toFixed(1) + 'x monthly' },
   { id: 'fYr', label: 'Annual', min: 6, max: 12, step: 0.5, fmt: v => v.toFixed(1) + 'x monthly' },
 ];
-let formula = { fBase: 10, fGrow1: 200, fGrow2: 140, fWk: 30, fQtr: 2.5, fYr: 9 };
+const FORMULA_SIMPLE = [
+  { id: 'fX', label: 'X · Tier Curve', min: 5, max: 100, step: 5, fmt: v => v + '% growth per tier step' },
+  { id: 'fY', label: 'Y · Period Curve', min: 0, max: 100, step: 1, fmt: v => v + '% commitment discount' },
+];
+let formulaMode = 'advanced';
+let formula = { fBase: 10, g1: 100, g2: 75, g3: 50, g4: 30, g5: 40, fWk: 30, fQtr: 2.5, fYr: 9, fX: 60, fY: 100 };
+
+function formulaConfig() {
+  return formulaMode === 'simple' ? FORMULA_SIMPLE : FORMULA_ADV;
+}
+function clampSlider(id, v) {
+  const cfg = FORMULA_ADV.concat(FORMULA_SIMPLE).find(c => c.id === id);
+  return Math.max(cfg.min, Math.min(cfg.max, v));
+}
+function computeMonthly() {
+  const n = TIERS.length;
+  const ms = [formula.fBase];
+  if (formulaMode === 'simple') {
+    for (let i = 1; i < n; i++) ms.push(Math.max(1, Math.round(ms[i - 1] * (1 + formula.fX / 100))));
+  } else {
+    const gs = [formula.g1, formula.g2, formula.g3, formula.g4, formula.g5];
+    for (let i = 1; i < n; i++) ms.push(Math.max(1, Math.round(ms[i - 1] * gs[i - 1] / 100)));
+  }
+  return ms;
+}
+function periodFactors() {
+  if (formulaMode === 'simple') {
+    const s = formula.fY / 100;
+    return { wk: 0.5 - 0.2 * s, qtr: 3 - 0.5 * s, yr: 12 - 3 * s };
+  }
+  return { wk: formula.fWk / 100, qtr: formula.fQtr, yr: formula.fYr };
+}
 
 function renderFormulaSliders() {
   const wrap = document.getElementById('formulaGrid');
   wrap.innerHTML = '';
-  FORMULA_CFG.forEach(cfg => {
+  formulaConfig().forEach(cfg => {
     const block = document.createElement('div');
     block.className = 'slider-block';
     block.innerHTML =
@@ -461,19 +505,33 @@ function renderFormulaSliders() {
   updateFormulaOut();
 }
 
+function setFormulaMode(mode, regen) {
+  formulaMode = mode;
+  document.querySelectorAll('#formulaModeSeg button').forEach(b => {
+    b.className = b.dataset.mode === mode ? 'active' : '';
+  });
+  document.getElementById('planeWrap').hidden = mode !== 'simple';
+  renderFormulaSliders();
+  if (regen !== false) applyFormula();
+  if (mode === 'simple') renderPlane();
+}
+
 function syncFormulaFromValues() {
-  const n = TIERS.length;
-  const m1 = values.tier1.monthly || 1;
-  const m2 = values.tier2.monthly || 1;
-  const m5 = values.tier5.monthly || 1;
-  const m6 = values.tier6.monthly || 1;
-  formula.fBase = m1;
-  formula.fGrow1 = Math.max(100, Math.min(300, Math.round(m2 / m1 * 100 / 5) * 5));
-  formula.fGrow2 = Math.max(100, Math.min(300, Math.round(m6 / m5 * 100 / 5) * 5));
-  formula.fWk = Math.max(15, Math.min(50, Math.round(values.tier1.weekly / m1 * 100)));
-  formula.fQtr = Math.max(1.5, Math.min(4, Math.round(values.tier1.quarterly / m1 * 10) / 10));
-  formula.fYr = Math.max(6, Math.min(12, Math.round(values.tier1.annual / m1 * 2) / 2));
-  FORMULA_CFG.forEach(cfg => {
+  const m = i => values['tier' + i].monthly || 1;
+  formula.fBase = m(1);
+  formula.g1 = clampSlider('g1', Math.round(m(2) / m(1) * 100 / 5) * 5);
+  formula.g2 = clampSlider('g2', Math.round(m(3) / m(2) * 100 / 5) * 5);
+  formula.g3 = clampSlider('g3', Math.round(m(4) / m(3) * 100 / 5) * 5);
+  formula.g4 = clampSlider('g4', Math.round(m(5) / m(4) * 100 / 5) * 5);
+  formula.g5 = clampSlider('g5', Math.round(m(6) / m(5) * 100 / 5) * 5);
+  const m1 = m(1);
+  formula.fWk = clampSlider('fWk', Math.round(values.tier1.weekly / m1 * 100));
+  formula.fQtr = clampSlider('fQtr', Math.round(values.tier1.quarterly / m1 * 10) / 10);
+  formula.fYr = clampSlider('fYr', Math.round(values.tier1.annual / m1 * 2) / 2);
+  const avg = (formula.g1 + formula.g2 + formula.g3 + formula.g4 + formula.g5) / 5;
+  formula.fX = clampSlider('fX', Math.round(avg / 5) * 5);
+  formula.fY = clampSlider('fY', Math.round((12 - formula.fYr) / 3 * 100));
+  formulaConfig().forEach(cfg => {
     const el = document.getElementById('fslider-' + cfg.id);
     const valEl = document.getElementById('fval-' + cfg.id);
     if (el) el.value = formula[cfg.id];
@@ -483,18 +541,14 @@ function syncFormulaFromValues() {
 }
 
 function applyFormula() {
-  const n = TIERS.length;
-  const ms = [formula.fBase];
-  for (let i = 1; i < n; i++) {
-    const g = formula.fGrow1 + (formula.fGrow2 - formula.fGrow1) * ((i - 1) / (n - 2));
-    ms.push(Math.max(1, Math.round(ms[i - 1] * g / 100)));
-  }
+  const ms = computeMonthly();
+  const pf = periodFactors();
   TIERS.forEach((t, i) => {
     const m = ms[i];
     values[t.id].monthly = m;
-    values[t.id].weekly = Math.max(1, Math.round(m * formula.fWk / 100));
-    values[t.id].quarterly = Math.max(3, Math.round(m * formula.fQtr));
-    values[t.id].annual = Math.max(12, Math.round(m * formula.fYr));
+    values[t.id].weekly = Math.max(1, Math.round(m * pf.wk));
+    values[t.id].quarterly = Math.max(3, Math.round(m * pf.qtr));
+    values[t.id].annual = Math.max(12, Math.round(m * pf.yr));
   });
   currentVariant = 'formula';
   renderInputs();
@@ -503,23 +557,119 @@ function applyFormula() {
   renderAll();
   renderVariants();
   updateFormulaOut();
+  if (formulaMode === 'simple') renderPlane();
 }
 
 function updateFormulaOut() {
   const out = document.getElementById('formulaOut');
   if (!out) return;
-  const n = TIERS.length;
-  const ms = [formula.fBase];
-  for (let i = 1; i < n; i++) {
-    const g = formula.fGrow1 + (formula.fGrow2 - formula.fGrow1) * ((i - 1) / (n - 2));
-    ms.push(Math.max(1, Math.round(ms[i - 1] * g / 100)));
-  }
-  const wk = v => Math.max(1, Math.round(v * formula.fWk / 100));
-  const qtr = v => Math.max(3, Math.round(v * formula.fQtr));
-  const yr = v => Math.max(12, Math.round(v * formula.fYr));
+  const ms = computeMonthly();
+  const pf = periodFactors();
   out.innerHTML = '<div class="fo-label">Monthly output from this formula</div>' +
-    TIERS.map((t, i) => t.name + ' <strong>$' + ms[i] + '</strong> (wk $' + wk(ms[i]) + ' · qtr $' + qtr(ms[i]) + ' · yr $' + yr(ms[i]) + ')').join(' &nbsp;·&nbsp; ');
+    TIERS.map((t, i) => t.name + ' <strong>$' + ms[i] + '</strong>').join(' &nbsp;·&nbsp; ') +
+    '<div style="margin-top:6px;opacity:.8">' +
+    (formulaMode === 'simple'
+      ? 'X curve: +' + formula.fX + '% per tier · Y curve: ' + formula.fY + '% commitment discount (wk ' + Math.round(pf.wk * 100) + '% · qtr ' + pf.qtr.toFixed(1) + 'x · yr ' + pf.yr.toFixed(1) + 'x of monthly)'
+      : 'Period ratios: wk ' + Math.round(pf.wk * 100) + '% · qtr ' + pf.qtr.toFixed(1) + 'x · yr ' + pf.yr.toFixed(1) + 'x of monthly') + '</div>';
 }
+
+function renderPlane() {
+  const canvas = document.getElementById('planeCanvas');
+  if (!canvas || formulaMode !== 'simple') return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 600, h = canvas.clientHeight || 360;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const P = PERIODS, N = TIERS.length;
+  let max = 0.01;
+  const grid = [];
+  TIERS.forEach((t, i) => {
+    grid[i] = [];
+    P.forEach((p, j) => {
+      grid[i][j] = values[t.id][p.id];
+      max = Math.max(max, grid[i][j]);
+    });
+  });
+  const cosY = Math.cos(0.62), sinY = Math.sin(0.62);
+  const cosX = Math.cos(0.38), sinX = Math.sin(0.38);
+  const fov = 9;
+  function proj(x, y, z) {
+    const x1 = x * cosY + z * sinY;
+    const z1 = -x * sinY + z * cosY;
+    const y2 = y * cosX - z1 * sinX;
+    const z2 = y * sinX + z1 * cosX;
+    const s = fov / (fov + z2);
+    return { x: x1 * s, y: y2 * s, d: z2 };
+  }
+  const cx = w * 0.52, cy = h * 0.52, scale = Math.min(w, h) / 7.6;
+  function pt(i, j, nz) {
+    const p = proj((i - (N - 1) / 2) * 1.15, (j - (P.length - 1) / 2) * 1.35, nz * 2.3);
+    return { x: cx + p.x * scale, y: cy - p.y * scale, d: p.d };
+  }
+  const px = (i, j) => pt(i, j, grid[i][j] / max);
+  // base plane grid
+  ctx.strokeStyle = 'rgba(139,148,158,0.25)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < N; i++) {
+    const a = pt(i, 0, 0), b = pt(i, P.length - 1, 0);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  for (let j = 0; j < P.length; j++) {
+    const a = pt(0, j, 0), b = pt(N - 1, j, 0);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  // surface quads, back to front
+  const quads = [];
+  for (let i = 0; i < N - 1; i++) for (let j = 0; j < P.length - 1; j++) {
+    const c = [px(i, j), px(i + 1, j), px(i + 1, j + 1), px(i, j + 1)];
+    quads.push({ c, d: (c[0].d + c[1].d + c[2].d + c[3].d) / 4, v: (grid[i][j] + grid[i + 1][j] + grid[i + 1][j + 1] + grid[i][j + 1]) / 4 / max });
+  }
+  quads.sort((a, b) => b.d - a.d);
+  quads.forEach(q => {
+    const hue = 160 - 160 * q.v;
+    ctx.fillStyle = 'hsla(' + hue + ', 75%, 48%, 0.9)';
+    ctx.strokeStyle = 'hsla(' + hue + ', 75%, 30%, 0.9)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(q.c[0].x, q.c[0].y);
+    q.c.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  });
+  // axis labels
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  TIERS.forEach((t, i) => {
+    const p = pt(i, P.length - 1, 0);
+    ctx.fillText(t.name, p.x, p.y + 16);
+  });
+  ctx.textAlign = 'right';
+  PERIODS.forEach((p, j) => {
+    const q = pt(N - 1, j, 0);
+    ctx.fillText(p.short, q.x + 12, q.y + 4);
+  });
+  // legend
+  const lx = 14, ly = h - 34, lw = 120, lh = 8;
+  const grad = ctx.createLinearGradient(lx, 0, lx + lw, 0);
+  grad.addColorStop(0, 'hsl(160,75%,48%)');
+  grad.addColorStop(1, 'hsl(0,75%,48%)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(lx, ly, lw, lh);
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('$0', lx, ly + 20);
+  ctx.textAlign = 'right';
+  ctx.fillText('$' + Math.round(max), lx + lw, ly + 20);
+  ctx.textAlign = 'center';
+  ctx.fillText('X = tier · Y = billing period · height/colour = price', w / 2, h - 8);
+}
+
+window.addEventListener('resize', () => { if (formulaMode === 'simple') renderPlane(); });
 
 // ---- quick-set sliders ----------------------------------------------------
 const SLIDER_CFG = [
@@ -1310,8 +1460,12 @@ function renderAll() {
 loadState();
 renderInputs();
 renderSliders();
+document.querySelectorAll('#formulaModeSeg button').forEach(b => {
+  b.addEventListener('click', () => setFormulaMode(b.dataset.mode));
+});
 renderFormulaSliders();
 syncFormulaFromValues();
+setFormulaMode('advanced', false);
 renderVariants();
 renderLegend();
 renderAll();
