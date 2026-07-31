@@ -178,6 +178,34 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     </div>
   </div>
 </div>
+  <!-- Per-day deep dive -->
+  <div class="card">
+    <h2>6. $ Per Day Deep Dive</h2>
+    <p class="sub" style="margin-bottom:14px">Cost per day for every tier and billing period. Treemap area = $/day, heatmap colour = $/day.</p>
+    <div class="charts-grid">
+      <div class="chart-box full">
+        <h3>Treemap — Cost Per Day</h3>
+        <p class="cap">Area = $/day. Column width = tier's total per-day cost. 12 cells = 3 tiers x 4 periods.</p>
+        <div class="tree" id="pdTreemap"></div>
+      </div>
+      <div class="chart-box">
+        <h3>Per-Day Heatmap</h3>
+        <p class="cap">Colour intensity = $/day across all 12 cells.</p>
+        <div class="heat-grid" id="pdHeatmap"></div>
+      </div>
+      <div class="chart-box">
+        <h3>Per-Day Radar</h3>
+        <p class="cap">Normalised $/day across periods. Larger area = costs more per day.</p>
+        <div class="chart-wrap"><canvas id="pdRadar"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Per-Day Bubble</h3>
+        <p class="cap">Bubble size = $/day. X = period, Y = $/day, colour = tier.</p>
+        <div class="chart-wrap"><canvas id="pdBubble"></canvas></div>
+      </div>
+    </div>
+  </div>
+
 <div class="toast" id="toast">Copied!</div>
 
 <script>
@@ -658,6 +686,115 @@ function renderDiffBar() {
   });
 }
 
+function pdMax() {
+  return Math.max(...TIERS.map(t => PERIODS.map(p => perDay(t.id, p.id))).flat(), 0.01);
+}
+
+function renderPerDayTreemap() {
+  const wrap = document.getElementById('pdTreemap');
+  const totals = TIERS.map(t => PERIODS.reduce((s, p) => s + perDay(t.id, p.id), 0));
+  const totalAll = totals.reduce((a, b) => a + b, 0) || 1;
+  wrap.innerHTML = '';
+  TIERS.forEach((t, ti) => {
+    const col = document.createElement('div');
+    col.className = 'tree-col';
+    col.style.width = (totals[ti] / totalAll * 100) + '%';
+    col.style.background = t.color + '22';
+    PERIODS.forEach(p => {
+      const v = perDay(t.id, p.id);
+      const maxInTier = Math.max(...PERIODS.map(pp => perDay(t.id, pp.id)), 0.01);
+      const cell = document.createElement('div');
+      cell.className = 'tree-cell';
+      cell.style.flexGrow = v;
+      cell.style.flexBasis = '0%';
+      cell.style.background = t.color;
+      cell.style.opacity = 0.35 + 0.65 * (v / maxInTier);
+      cell.textContent = '$' + v.toFixed(2);
+      cell.title = t.name + ' ' + p.name + ': $' + v.toFixed(2) + '/day';
+      col.appendChild(cell);
+    });
+    wrap.appendChild(col);
+  });
+}
+
+function renderPerDayHeatmap() {
+  const wrap = document.getElementById('pdHeatmap');
+  const max = pdMax();
+  let html = '<div class="hc"></div>';
+  PERIODS.forEach(p => html += '<div class="hc">' + p.name + '</div>');
+  TIERS.forEach(t => {
+    html += '<div class="hc" style="color:' + t.color + ';font-weight:700">' + t.name + '</div>';
+    PERIODS.forEach(p => {
+      const v = perDay(t.id, p.id);
+      const alpha = 0.15 + 0.85 * (v / max);
+      html += '<div class="heat-cell" style="background:rgba(59,130,246,' + alpha + ')">'
+        + '<span><span class="hlabel">' + p.short + '</span>$' + v.toFixed(2) + '</span></div>';
+    });
+  });
+  wrap.innerHTML = html;
+}
+
+function renderPerDayRadar() {
+  const ctx = document.getElementById('pdRadar').getContext('2d');
+  const max = pdMax();
+  charts.pdRadar = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: PERIODS.map(p => p.name),
+      datasets: TIERS.map(t => ({
+        label: t.name,
+        data: PERIODS.map(p => perDay(t.id, p.id) / max * 100),
+        backgroundColor: t.color + '44',
+        borderColor: t.color,
+        pointBackgroundColor: t.color,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { display: false },
+          grid: { color: '#2d333b' },
+          angleLines: { color: '#2d333b' },
+          pointLabels: { color: '#8b949e', font: { size: 11 } },
+        },
+      },
+    },
+  });
+}
+
+function renderPerDayBubble() {
+  const ctx = document.getElementById('pdBubble').getContext('2d');
+  const max = pdMax();
+  const data = [];
+  TIERS.forEach(t => {
+    PERIODS.forEach((p, i) => {
+      const v = perDay(t.id, p.id);
+      data.push({ x: i, y: +v.toFixed(2), r: 4 + (v / max) * 22, tier: t.name });
+    });
+  });
+  charts.pdBubble = new Chart(ctx, {
+    type: 'bubble',
+    data: { datasets: TIERS.map(t => ({
+      label: t.name,
+      data: data.filter(d => d.tier === t.name),
+      backgroundColor: t.color + '99',
+      borderColor: t.color,
+      borderWidth: 1.5,
+    }))},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { type: 'category', labels: PERIODS.map(p => p.name), ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, beginAtZero: true, title: { display: true, text: 'Cost per day (USD)', color: '#8b949e' } },
+      },
+    },
+  });
+}
+
 function renderLegend() {
   const leg = document.getElementById('legend');
   leg.innerHTML = TIERS.map(t => `<span><span class="dot" style="background:${t.color}"></span>${t.name}</span>`).join('');
@@ -667,6 +804,10 @@ function renderAll() {
   destroyCharts();
   renderTables();
   renderPerDay();
+  renderPerDayTreemap();
+  renderPerDayHeatmap();
+  renderPerDayRadar();
+  renderPerDayBubble();
   renderDiffTable();
   renderDiffLine();
   renderDiffBar();
