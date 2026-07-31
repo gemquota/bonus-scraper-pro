@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing Visualizer — Bonus Scraper Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --surface-2: #1c2330;
+  --border: #2d333b; --text: #e6edf3; --muted: #8b949e;
+  --blue: #3b82f6; --amber: #f59e0b; --green: #10b981;
+  --radius: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; }
+.container { max-width: 1100px; margin: 0 auto; }
+h1 { font-size: 1.6rem; margin-bottom: 4px; }
+.sub { color: var(--muted); margin-bottom: 24px; font-size: 0.9rem; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+.card h2 { font-size: 1.05rem; margin-bottom: 14px; }
+
+/* Inputs */
+.input-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.tier-block { background: var(--surface-2); border-radius: 10px; padding: 14px; }
+.tier-block h3 { font-size: 0.85rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.field { margin-bottom: 8px; }
+.field label { display: block; font-size: 0.7rem; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+.field input { width: 100%; padding: 8px 10px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
+.field input:focus { outline: 2px solid var(--blue); border-color: transparent; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.btn { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; }
+.btn:hover { border-color: var(--blue); }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn.green { background: var(--green); border-color: var(--green); color: #fff; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--green); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 100; }
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* Tables */
+.tables-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 20px; }
+.pb-table { overflow-x: auto; }
+.pb-table h3 { font-size: 0.9rem; margin-bottom: 8px; color: var(--blue); }
+.pb-table table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.pb-table th, .pb-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.pb-table th { color: var(--muted); font-weight: 600; }
+.pb-table td.native { color: var(--green); font-weight: 700; }
+
+/* Charts */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.chart-box h3 { font-size: 0.9rem; margin-bottom: 4px; }
+.chart-box .cap { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
+.chart-wrap { position: relative; height: 300px; }
+.chart-wrap.tall { height: 360px; }
+.chart-box.full { grid-column: 1 / -1; }
+.seg { display: flex; gap: 6px; margin-bottom: 10px; }
+.seg button { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.75rem; font-weight: 600; }
+.seg button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* Heatmap */
+.heat-grid { display: grid; grid-template-columns: 90px repeat(4, 1fr); gap: 6px; font-size: 0.8rem; }
+.heat-grid .hc { text-align: center; color: var(--muted); font-size: 0.7rem; padding: 6px 0; }
+.heat-cell { display: flex; align-items: center; justify-content: center; padding: 14px 8px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; min-height: 46px; text-align: center; }
+.heat-cell .hlabel { display: block; font-size: 0.65rem; font-weight: 500; opacity: 0.85; margin-bottom: 2px; }
+
+/* Treemap */
+.tree { display: flex; gap: 4px; height: 300px; }
+.tree-col { display: flex; flex-direction: column; gap: 4px; border-radius: 8px; overflow: hidden; min-width: 60px; }
+.tree-cell { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #fff; text-align: center; border-radius: 6px; padding: 6px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.75rem; color: var(--muted); }
+.legend span { display: flex; align-items: center; gap: 6px; }
+
+/* Mobile */
+@media (max-width: 860px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .input-grid { grid-template-columns: 1fr; }
+  .tables-grid { grid-template-columns: 1fr; }
+  .heat-grid { grid-template-columns: 70px repeat(4, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📊 Pricing Visualizer</h1>
+  <p class="sub">Enter the 12 prices — tables and charts update live. Values persist in the URL.</p>
+
+  <!-- Inputs -->
+  <div class="card">
+    <h2>1. Enter Prices (USD)</h2>
+    <div class="input-grid" id="inputGrid"></div>
+    <div class="actions">
+      <button class="btn primary" onclick="resetDefaults()">Reset to Defaults</button>
+      <button class="btn" onclick="copyLink()">🔗 Copy Share Link</button>
+      <button class="btn green" onclick="copyMarkdown()">📋 Copy Markdown Tables</button>
+    </div>
+  </div>
+
+  <!-- Tables -->
+  <div class="card">
+    <h2>2. Equivalent Cost Tables</h2>
+    <div class="tables-grid" id="tablesGrid"></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="card">
+    <h2>3. Charts</h2>
+    <div class="legend" id="legend"></div>
+    <div class="charts-grid">
+      <div class="chart-box">
+        <h3>Price by Billing Period</h3>
+        <p class="cap">Volume = price. Grouped bars, one per tier.</p>
+        <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Price Heatmap</h3>
+        <p class="cap">Colour intensity = price magnitude across all 12 cells.</p>
+        <div class="heat-grid" id="heatmap"></div>
+      </div>
+      <div class="chart-box">
+        <h3>Bubble Chart</h3>
+        <p class="cap">Bubble volume = price. X = period, Y = price, colour = tier.</p>
+        <div class="chart-wrap"><canvas id="bubbleChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Total Spend Over 12 Months</h3>
+        <p class="cap">Cumulative cost by billing choice. Weekly bills fastest; annual is cheapest overall.</p>
+        <div class="seg" id="cumSeg"></div>
+        <div class="chart-wrap"><canvas id="cumChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Radar — Period Cost Shape</h3>
+        <p class="cap">Normalised price across the 4 periods. The larger the area, the more you pay.</p>
+        <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Treemap</h3>
+        <p class="cap">Area = price. Column width = tier's total annual-equivalent cost.</p>
+        <div class="tree" id="treemap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+const TIERS = [
+  { id: 'tier1', name: 'Starter', color: '#3b82f6' },
+  { id: 'tier2', name: 'Pro', color: '#f59e0b' },
+  { id: 'tier3', name: 'Elite', color: '#10b981' },
+];
+const PERIODS = [
+  { id: 'weekly', name: 'Weekly', short: '/wk' },
+  { id: 'monthly', name: 'Monthly', short: '/mo' },
+  { id: 'quarterly', name: 'Quarterly', short: '/qtr' },
+  { id: 'annual', name: 'Annual', short: '/yr' },
+];
+
+const DEFAULTS = {
+  tier1: { weekly: 6, monthly: 20, quarterly: 50, annual: 180 },
+  tier2: { weekly: 12, monthly: 35, quarterly: 90, annual: 300 },
+  tier3: { weekly: 24, monthly: 70, quarterly: 180, annual: 600 },
+};
+
+let values = JSON.parse(JSON.stringify(DEFAULTS));
+
+// ---- helpers -------------------------------------------------------------
+function fmt(n) {
+  if (n >= 1000) return '$' + (Math.round(n / 100) / 10).toFixed(1).replace(/\.0$/, '') + 'k';
+  return '$' + Math.round(n).toLocaleString();
+}
+function round1(n) { return Math.max(1, Math.round(n)); }
+function WEEKS_PER_YEAR() { return 52; }
+function toAnnual(tier, period) {
+  const v = values[tier][period];
+  switch (period) {
+    case 'weekly': return v * 52;
+    case 'monthly': return v * 12;
+    case 'quarterly': return v * 4;
+    case 'annual': return v;
+  }
+}
+// Convert price from `from` period to `to` period
+function convert(tier, from, to) {
+  const annual = toAnnual(tier, from);
+  switch (to) {
+    case 'weekly': return annual / 52;
+    case 'monthly': return annual / 12;
+    case 'quarterly': return annual / 4;
+    case 'annual': return annual;
+  }
+}
+
+// ---- render inputs --------------------------------------------------------
+function renderInputs() {
+  const grid = document.getElementById('inputGrid');
+  grid.innerHTML = '';
+  TIERS.forEach(t => {
+    const block = document.createElement('div');
+    block.className = 'tier-block';
+    let html = `<h3><span class="dot" style="background:${t.color}"></span>${t.name}</h3>`;
+    PERIODS.forEach(p => {
+      html += `<div class="field"><label>${p.name} (${p.short})</label>
+        <input type="number" min="0" step="0.5" data-tier="${t.id}" data-period="${p.id}" value="${values[t.id][p.id]}"></div>`;
+    });
+    block.innerHTML = html;
+    grid.appendChild(block);
+  });
+  grid.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const tier = inp.dataset.tier, period = inp.dataset.period;
+      const v = parseFloat(inp.value);
+      values[tier][period] = isNaN(v) || v < 0 ? 0 : v;
+      saveState();
+      renderAll();
+    });
+  });
+}
+
+// ---- tables ---------------------------------------------------------------
+function renderTables() {
+  const wrap = document.getElementById('tablesGrid');
+  wrap.innerHTML = '';
+  PERIODS.forEach(base => {
+    const div = document.createElement('div');
+    div.className = 'pb-table';
+    let html = `<h3>If You Pay ${base.name}</h3><table><tr><th>Period</th>`;
+    TIERS.forEach(t => html += `<th>${t.name}</th>`);
+    html += '</tr>';
+    PERIODS.forEach(p => {
+      html += `<tr><td>${p.name}</td>`;
+      TIERS.forEach(t => {
+        const v = convert(t.id, base.id, p.id);
+        const cls = p.id === base.id ? 'native' : '';
+        html += `<td class="${cls}">${fmt(v)}${p.short}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</table>';
+    div.innerHTML = html;
+    wrap.appendChild(div);
+  });
+}
+
+// ---- charts ---------------------------------------------------------------
+let charts = {};
+function destroyCharts() {
+  Object.values(charts).forEach(c => { if (c) c.destroy(); });
+  charts = {};
+}
+function scaleFactor() {
+  const max = Math.max(...TIERS.map(t => PERIODS.map(p => values[t.id][p.id])).flat(), 1);
+  return max;
+}
+
+function renderBar() {
+  const ctx = document.getElementById('barChart').getContext('2d');
+  charts.bar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: PERIODS.map(p => p.name),
+      datasets: TIERS.map(t => ({
+        label: t.name,
+        data: PERIODS.map(p => values[t.id][p.id]),
+        backgroundColor: t.color,
+        borderRadius: 6,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, beginAtZero: true },
+      },
+    },
+  });
+}
+
+function renderHeatmap() {
+  const wrap = document.getElementById('heatmap');
+  const max = scaleFactor();
+  let html = '<div class="hc"></div>';
+  PERIODS.forEach(p => html += `<div class="hc">${p.name}</div>`);
+  TIERS.forEach(t => {
+    html += `<div class="hc" style="color:${t.color};font-weight:700">${t.name}</div>`;
+    PERIODS.forEach(p => {
+      const v = values[t.id][p.id];
+      const inten = v / max;
+      const alpha = 0.15 + 0.85 * inten;
+      html += `<div class="heat-cell" style="background:rgba(59,130,246,${alpha})">
+        <span><span class="hlabel">${p.short}</span>${fmt(v)}</span></div>`;
+    });
+  });
+  wrap.innerHTML = html;
+}
+
+function renderBubble() {
+  const ctx = document.getElementById('bubbleChart').getContext('2d');
+  const max = scaleFactor();
+  const data = [];
+  TIERS.forEach(t => {
+    PERIODS.forEach((p, i) => {
+      const v = values[t.id][p.id];
+      data.push({ x: i, y: v, r: 4 + (v / max) * 22, tier: t.name });
+    });
+  });
+  charts.bubble = new Chart(ctx, {
+    type: 'bubble',
+    data: { datasets: TIERS.map(t => ({
+      label: t.name,
+      data: data.filter(d => d.tier === t.name),
+      backgroundColor: t.color + '99',
+      borderColor: t.color,
+      borderWidth: 1.5,
+    }))},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { type: 'category', labels: PERIODS.map(p => p.name), ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, beginAtZero: true, title: { display: true, text: 'Price (USD)', color: '#8b949e' } },
+      },
+    },
+  });
+}
+
+let cumTier = 'tier1';
+function renderCumulative() {
+  const seg = document.getElementById('cumSeg');
+  seg.innerHTML = '';
+  TIERS.forEach(t => {
+    const b = document.createElement('button');
+    b.textContent = t.name;
+    b.className = cumTier === t.id ? 'active' : '';
+    b.onclick = () => { cumTier = t.id; renderCumulative(); renderCumChart(); };
+    seg.appendChild(b);
+  });
+  renderCumChart();
+}
+function renderCumChart() {
+  const ctx = document.getElementById('cumChart').getContext('2d');
+  const months = Array.from({ length: 13 }, (_, i) => i);
+  const datasets = PERIODS.map(p => {
+    const monthly = toAnnual(cumTier, p.id) / 12;
+    return {
+      label: `Pay ${p.name.toLowerCase()}`,
+      data: months.map(m => round1(monthly * m)),
+      borderColor: p.id === 'weekly' ? '#ef4444' : p.id === 'monthly' ? '#f59e0b' : p.id === 'quarterly' ? '#3b82f6' : '#10b981',
+      backgroundColor: 'transparent',
+      tension: 0.1,
+      pointRadius: 0,
+    };
+  });
+  charts.cum = new Chart(ctx, {
+    type: 'line',
+    data: { labels: months.map(m => 'M' + m), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e', maxTicksLimit: 13 }, grid: { color: '#2d333b' } },
+        y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, title: { display: true, text: 'Total spent (USD)', color: '#8b949e' } },
+      },
+    },
+  });
+}
+
+function renderRadar() {
+  const ctx = document.getElementById('radarChart').getContext('2d');
+  const max = scaleFactor();
+  charts.radar = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: PERIODS.map(p => p.name),
+      datasets: TIERS.map(t => ({
+        label: t.name,
+        data: PERIODS.map(p => values[t.id][p.id] / max * 100),
+        backgroundColor: t.color + '44',
+        borderColor: t.color,
+        pointBackgroundColor: t.color,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        r: {
+          min: 0, max: 100,
+          ticks: { display: false },
+          grid: { color: '#2d333b' },
+          angleLines: { color: '#2d333b' },
+          pointLabels: { color: '#8b949e', font: { size: 11 } },
+        },
+      },
+    },
+  });
+}
+
+function renderTreemap() {
+  const wrap = document.getElementById('treemap');
+  const totals = TIERS.map(t => PERIODS.reduce((s, p) => s + toAnnual(t.id, p.id), 0));
+  const totalAll = totals.reduce((a, b) => a + b, 0) || 1;
+  wrap.innerHTML = '';
+  TIERS.forEach((t, ti) => {
+    const col = document.createElement('div');
+    col.className = 'tree-col';
+    col.style.width = (totals[ti] / totalAll * 100) + '%';
+    col.style.background = t.color + '22';
+    PERIODS.forEach(p => {
+      const v = values[t.id][p.id];
+      const maxInTier = Math.max(...PERIODS.map(pp => values[t.id][pp.id]), 1);
+      const cell = document.createElement('div');
+      cell.className = 'tree-cell';
+      cell.style.flexGrow = v;
+      cell.style.flexBasis = '0%';
+      cell.style.background = t.color;
+      cell.style.opacity = 0.35 + 0.65 * (v / maxInTier);
+      cell.textContent = `${fmt(v)}${p.short}`;
+      col.appendChild(cell);
+    });
+    wrap.appendChild(col);
+  });
+}
+
+// ---- state / sharing ------------------------------------------------------
+function saveState() {
+  const h = btoa(unescape(encodeURIComponent(JSON.stringify(values))));
+  history.replaceState(null, '', '#' + h);
+}
+function loadState() {
+  try {
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (!h) return;
+    const parsed = JSON.parse(decodeURIComponent(escape(atob(h))));
+    TIERS.forEach(t => PERIODS.forEach(p => {
+      const v = parsed[t.id]?.[p.id];
+      if (typeof v === 'number') values[t.id][p.id] = v;
+    }));
+  } catch {}
+}
+function copyLink() {
+  saveState();
+  navigator.clipboard.writeText(location.href).then(() => toast('Link copied!'));
+}
+function copyMarkdown() {
+  let md = '';
+  PERIODS.forEach(base => {
+    md += `## ${base.name}\n| Period | Starter | Pro | Elite |\n|---|---|---|---|\n`;
+    PERIODS.forEach(p => {
+      md += `| ${p.name} |`;
+      TIERS.forEach(t => {
+        const v = convert(t.id, base.id, p.id);
+        md += ` ${fmt(v)}${p.short} |`;
+      });
+      md += '\n';
+    });
+    md += '\n';
+  });
+  navigator.clipboard.writeText(md.trim()).then(() => toast('Markdown tables copied!'));
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+function resetDefaults() {
+  values = JSON.parse(JSON.stringify(DEFAULTS));
+  renderInputs();
+  saveState();
+  renderAll();
+}
+
+function renderLegend() {
+  const leg = document.getElementById('legend');
+  leg.innerHTML = TIERS.map(t => `<span><span class="dot" style="background:${t.color}"></span>${t.name}</span>`).join('');
+}
+
+function renderAll() {
+  destroyCharts();
+  renderTables();
+  renderBar();
+  renderHeatmap();
+  renderBubble();
+  renderCumulative();
+  renderRadar();
+  renderTreemap();
+}
+
+loadState();
+renderInputs();
+renderLegend();
+renderAll();
+</script>
+</body>
+</html>
