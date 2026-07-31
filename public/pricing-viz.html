@@ -103,7 +103,7 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
 .formula-out { margin-top: 12px; font-size: 0.85rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
 .formula-out .fo-label { color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
 .plane-wrap { margin-top: 14px; }
-.plane-wrap canvas { width: 100%; height: 360px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; display: block; }
+.plane-wrap canvas { width: 100%; height: 360px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; display: block; touch-action: none; cursor: grab; }
 
 /* Growth */
 .growth-blocks { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -153,11 +153,17 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     </div>
 
     <div class="tab-panel" id="panel-simple">
-      <p class="sub" style="margin-bottom:14px">Two sliders shape the whole pricing function — X = tier curve, Y = period curve. The trapezoid shows the outline live. Tap any value to type one in.</p>
+      <p class="sub" style="margin-bottom:14px">Two sliders shape the whole pricing function — X = tier curve, Y = period curve. The grid below updates live, and every dot can be dragged straight up or down to set its exact price. Tap any slider value to type one in.</p>
       <div class="slider-grid" id="formulaGridSimple"></div>
       <div class="formula-out" id="formulaOutSimple"></div>
       <div class="plane-wrap" id="planeWrap">
-        <div class="fo-label" style="margin-bottom:6px">Price trapezoid — X = tier (left → right), Y = price. Top edge = annual, bottom edge = weekly, sides = Brokeass &amp; Friend period spreads.</div>
+        <div class="fo-label" style="margin-bottom:6px">Drag any dot up or down to set that price — X = tier (left → right), Y = price. Each line is one billing period.</div>
+        <div class="legend" style="margin-bottom:8px">
+          <span><span class="dot" style="background:#3b82f6"></span>Weekly</span>
+          <span><span class="dot" style="background:#a78bfa"></span>Monthly</span>
+          <span><span class="dot" style="background:#f59e0b"></span>Quarterly</span>
+          <span><span class="dot" style="background:#10b981"></span>Annual</span>
+        </div>
         <canvas id="planeCanvas"></canvas>
       </div>
     </div>
@@ -586,7 +592,7 @@ function setTab(tab) {
     if (p) p.classList.toggle('active', t === tab);
   });
   if (tab === 'adv') { formulaMode = 'advanced'; renderFormulaSliders(); }
-  if (tab === 'simple') { formulaMode = 'simple'; renderFormulaSliders(); renderTrapezoid(); }
+  if (tab === 'simple') { formulaMode = 'simple'; renderFormulaSliders(); renderVertexGrid(); }
 }
 
 function syncFormulaFromValues() {
@@ -625,7 +631,7 @@ function runFullUpdate() {
   renderAll();
   renderVariants();
   updateFormulaOut();
-  if (formulaMode === 'simple') renderTrapezoid();
+  if (formulaMode === 'simple') renderVertexGrid();
 }
 function scheduleFullUpdate() {
   if (fullUpdateQueued) return;
@@ -675,114 +681,189 @@ function updateFormulaOut() {
       : 'Period ratios: wk ' + Math.round(pf.wk * 100) + '% · qtr ' + pf.qtr.toFixed(1) + 'x · yr ' + pf.yr.toFixed(1) + 'x of monthly') + '</div>';
 }
 
-function renderTrapezoid() {
+// ---- draggable vertex grid (simple X/Y mode) ------------------------------
+const PERIOD_COLORS = { weekly: '#3b82f6', monthly: '#a78bfa', quarterly: '#f59e0b', annual: '#10b981' };
+let vertexDrag = null;   // { i, j, pointerId } while dragging
+let vertexHover = null;  // { i, j } for hover highlight
+
+function planeGeom() {
   const canvas = document.getElementById('planeCanvas');
-  if (!canvas || formulaMode !== 'simple') return;
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth || 600, h = canvas.clientHeight || 360;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, w, h);
-
-  const N = TIERS.length, P = PERIODS;
-  const price = (i, j) => values[TIERS[i].id][P[j].id];
-  let max = 0.01;
-  TIERS.forEach((t, i) => P.forEach((p, j) => { max = Math.max(max, values[t.id][p.id]); }));
-  // fixed axis so the Y curve visibly reshapes the trapezoid; expands only if prices exceed it
-  const axisMax = Math.max(3000, max);
-
-  const padL = 100, padR = 54, padT = 36, padB = 66;
+  const w = (canvas && canvas.clientWidth) || 600;
+  const h = (canvas && canvas.clientHeight) || 360;
+  const N = TIERS.length;
+  const padL = 64, padR = 20, padT = 26, padB = 46;
+  let axisMax = 3000;
+  TIERS.forEach(t => PERIODS.forEach(p => { axisMax = Math.max(axisMax, values[t.id][p.id]); }));
   const plotW = w - padL - padR, plotH = h - padT - padB;
-  const X = i => padL + (i / (N - 1)) * plotW;
-  const Y = v => padT + plotH - (v / axisMax) * plotH;
-
-  // Trapezoid corners — the outside of the pricing function:
-  // A bottom-left  = Brokeass weekly  (cheapest cell)
-  // B bottom-right = Friend weekly
-  // C top-right    = Friend annual    (most expensive cell)
-  // D top-left     = Brokeass annual
-  const A = { x: X(0), y: Y(price(0, 0)) };
-  const B = { x: X(N - 1), y: Y(price(N - 1, 0)) };
-  const C = { x: X(N - 1), y: Y(price(N - 1, 3)) };
-  const D = { x: X(0), y: Y(price(0, 3)) };
-
-  // y-axis ticks
-  ctx.font = '9px sans-serif';
-  ctx.textAlign = 'right';
-  [0, 0.5, 1].forEach(t => {
-    const v = Math.round(axisMax * t);
-    const yy = Y(v);
-    ctx.fillStyle = '#6b7280';
-    ctx.fillText('$' + v, padL - 8, yy + 3);
-    ctx.strokeStyle = 'rgba(139,148,158,0.15)';
-    ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
-  });
-  ctx.fillText('$0', padL - 8, Y(0) + 3);
-
-  // trapezoid fill + outline
-  ctx.fillStyle = 'rgba(59,130,246,0.08)';
-  ctx.strokeStyle = 'rgba(59,130,246,0.85)';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y); ctx.lineTo(D.x, D.y);
-  ctx.closePath();
-  ctx.fill(); ctx.stroke();
-
-  // actual data along each edge: dashed curve + dots
-  const drawPts = (pts, color) => {
-    ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.setLineDash([4, 3]);
-    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-    pts.slice(1).forEach(pt => ctx.lineTo(pt.x, pt.y));
-    ctx.stroke(); ctx.setLineDash([]);
-    pts.forEach(pt => {
-      ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.4, 0, Math.PI * 2);
-      ctx.fillStyle = color; ctx.fill();
-    });
+  return {
+    canvas, w, h, N, axisMax, padL, padR, padT, padB, plotW, plotH,
+    X: i => padL + (i / (N - 1)) * plotW,
+    Y: v => padT + plotH - (v / axisMax) * plotH,
   };
-  const wkPts = [], anPts = [], lfPts = [], rtPts = [];
-  for (let i = 0; i < N; i++) {
-    wkPts.push({ x: X(i), y: Y(price(i, 0)) });
-    anPts.push({ x: X(i), y: Y(price(i, 3)) });
-  }
-  for (let j = 0; j < P.length; j++) {
-    lfPts.push({ x: X(0), y: Y(price(0, j)) });
-    rtPts.push({ x: X(N - 1), y: Y(price(N - 1, j)) });
-  }
-  drawPts(wkPts, '#3b82f6');
-  drawPts(anPts, '#10b981');
-  drawPts(lfPts, '#a78bfa');
-  drawPts(rtPts, '#a78bfa');
-
-  // corner labels
-  ctx.font = 'bold 10px sans-serif';
-  const corner = (pt, txt, color, align) => {
-    ctx.fillStyle = color;
-    ctx.textAlign = align;
-    ctx.fillText(txt, pt.x + (align === 'left' ? 8 : -8), pt.y + 3);
-  };
-  corner(A, 'Brokeass /wk $' + price(0, 0), '#3b82f6', 'right');
-  corner(B, 'Friend /wk $' + price(N - 1, 0), '#3b82f6', 'left');
-  corner(C, 'Friend /yr $' + price(N - 1, 3), '#10b981', 'left');
-  corner(D, 'Brokeass /yr $' + price(0, 3), '#10b981', 'right');
-
-  // axis labels
-  ctx.fillStyle = '#8b949e';
-  ctx.font = '10px sans-serif';
-  ctx.textAlign = 'center';
-  TIERS.forEach((t, i) => ctx.fillText(t.name, X(i), h - padB + 18));
-  ctx.textAlign = 'right';
-  P.forEach((p, j) => {
-    const pt = lfPts[j];
-    ctx.fillText(p.name, padL - 8, pt.y + 3);
-  });
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#6b7280';
-  ctx.font = '9px sans-serif';
-  ctx.fillText('Top edge = annual · bottom edge = weekly · left/right = Brokeass/Friend period spreads · X = tier, Y = price', w / 2, h - 8);
 }
 
-window.addEventListener('resize', () => { if (formulaMode === 'simple') renderTrapezoid(); });
+function renderVertexGrid() {
+  const g = planeGeom();
+  if (!g.canvas || formulaMode !== 'simple') return;
+  const dpr = window.devicePixelRatio || 1;
+  const canvas = g.canvas;
+  canvas.width = g.w * dpr; canvas.height = g.h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, g.w, g.h);
+
+  const P = PERIODS;
+  const price = (i, j) => values[TIERS[i].id][P[j].id];
+  const pts = P.map((p, j) => TIERS.map((t, i) => ({ x: g.X(i), y: g.Y(price(i, j)) })));
+
+  // horizontal gridlines + y labels
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let v = 0; v <= g.axisMax; v += 500) {
+    const yy = g.Y(v);
+    ctx.fillStyle = '#6b7280';
+    ctx.fillText('$' + v, g.padL - 8, yy);
+    ctx.strokeStyle = 'rgba(139,148,158,0.14)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(g.padL, yy); ctx.lineTo(g.w - g.padR, yy); ctx.stroke();
+  }
+
+  // vertical tier guides
+  ctx.strokeStyle = 'rgba(139,148,158,0.08)';
+  TIERS.forEach((t, i) => {
+    const xx = g.X(i);
+    ctx.beginPath(); ctx.moveTo(xx, g.padT); ctx.lineTo(xx, g.h - g.padB); ctx.stroke();
+  });
+
+  // period lines
+  pts.forEach((line, j) => {
+    ctx.strokeStyle = PERIOD_COLORS[P[j].id];
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath(); ctx.moveTo(line[0].x, line[0].y);
+    line.slice(1).forEach(pt => ctx.lineTo(pt.x, pt.y));
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  });
+
+  // vertices
+  pts.forEach((line, j) => {
+    const color = PERIOD_COLORS[P[j].id];
+    line.forEach((pt, i) => {
+      const active = vertexDrag && vertexDrag.i === i && vertexDrag.j === j;
+      const hover = !vertexDrag && vertexHover && vertexHover.i === i && vertexHover.j === j;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, (active || hover) ? 8 : 6, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#0d1117';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (active) {
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, 13, 0, Math.PI * 2);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    });
+  });
+
+  // tier labels
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'center';
+  TIERS.forEach((t, i) => {
+    ctx.fillStyle = t.color;
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText(t.name, g.X(i), g.h - g.padB + 16);
+  });
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '9px sans-serif';
+  ctx.fillText('Drag a dot up or down to set its price · X = tier, Y = price', g.w / 2, g.h - 8);
+
+  // price tag while dragging
+  if (vertexDrag) {
+    const { i, j } = vertexDrag;
+    const pt = pts[j][i];
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = PERIOD_COLORS[P[j].id];
+    ctx.fillText(P[j].name + ' $' + price(i, j), pt.x, Math.max(12, pt.y - 18));
+  }
+}
+
+function nearestVertex(g, px, py, maxD) {
+  let best = null, bestD = maxD;
+  TIERS.forEach((t, i) => PERIODS.forEach((p, j) => {
+    const x = g.X(i), y = g.Y(values[t.id][p.id]);
+    const d = Math.hypot(px - x, py - y);
+    if (d < bestD) { bestD = d; best = { i, j }; }
+  }));
+  return best;
+}
+
+function setupVertexDrag() {
+  const canvas = document.getElementById('planeCanvas');
+  if (!canvas) return;
+  canvas.addEventListener('pointerdown', e => {
+    if (formulaMode !== 'simple') return;
+    const g = planeGeom();
+    const rect = canvas.getBoundingClientRect();
+    const hit = nearestVertex(g, e.clientX - rect.left, e.clientY - rect.top, 16);
+    if (!hit) return;
+    vertexDrag = { i: hit.i, j: hit.j, pointerId: e.pointerId };
+    canvas.style.cursor = 'grabbing';
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    renderVertexGrid();
+    e.preventDefault();
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (formulaMode !== 'simple') return;
+    const g = planeGeom();
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left, py = e.clientY - rect.top;
+    if (vertexDrag) {
+      const raw = (g.padT + g.plotH - py) / g.plotH * g.axisMax;
+      const v = Math.max(1, Math.min(g.axisMax, Math.round(raw)));
+      const tier = TIERS[vertexDrag.i].id, period = PERIODS[vertexDrag.j].id;
+      if (v !== values[tier][period]) {
+        values[tier][period] = v;
+        syncSliders();
+        syncFormulaFromValues();
+        renderVertexGrid();
+        scheduleFullUpdate();
+      }
+      e.preventDefault();
+      return;
+    }
+    const hover = nearestVertex(g, px, py, 14);
+    const changed = (hover && (!vertexHover || hover.i !== vertexHover.i || hover.j !== vertexHover.j)) ||
+                    (!hover && vertexHover);
+    if (changed) {
+      vertexHover = hover;
+      canvas.style.cursor = hover ? 'grab' : 'default';
+      renderVertexGrid();
+    }
+  });
+  const endDrag = e => {
+    if (vertexDrag && e.pointerId === vertexDrag.pointerId) {
+      vertexDrag = null;
+      canvas.style.cursor = 'default';
+      renderVertexGrid();
+    }
+  };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('pointerleave', () => {
+    if (!vertexDrag) {
+      vertexHover = null;
+      canvas.style.cursor = 'default';
+      renderVertexGrid();
+    }
+  });
+}
+
+window.addEventListener('resize', () => { if (formulaMode === 'simple') renderVertexGrid(); });
 
 // ---- quick-set sliders ----------------------------------------------------
 const SLIDER_CFG = [
@@ -1582,6 +1663,7 @@ document.querySelectorAll('#controlTabs .tab').forEach(b => {
 });
 renderFormulaSliders();
 syncFormulaFromValues();
+setupVertexDrag();
 setTab('variants');
 renderVariants();
 renderLegend();
