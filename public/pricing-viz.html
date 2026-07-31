@@ -135,7 +135,7 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     <div class="slider-grid" id="formulaGrid"></div>
     <div class="formula-out" id="formulaOut"></div>
     <div class="plane-wrap" id="planeWrap" hidden>
-      <div class="fo-label" style="margin-bottom:6px">Price plane — X = tier, Y = billing period, height &amp; colour = price</div>
+      <div class="fo-label" style="margin-bottom:6px">Price trapezoid — X = tier (left → right), Y = price. Top edge = annual, bottom edge = weekly, sides = Brokeass &amp; Friend period spreads. Drag X/Y to reshape the outline.</div>
       <canvas id="planeCanvas"></canvas>
     </div>
   </div>
@@ -513,7 +513,7 @@ function setFormulaMode(mode, regen) {
   document.getElementById('planeWrap').hidden = mode !== 'simple';
   renderFormulaSliders();
   if (regen !== false) applyFormula();
-  if (mode === 'simple') renderPlane();
+  if (mode === 'simple') renderTrapezoid();
 }
 
 function syncFormulaFromValues() {
@@ -557,7 +557,7 @@ function applyFormula() {
   renderAll();
   renderVariants();
   updateFormulaOut();
-  if (formulaMode === 'simple') renderPlane();
+  if (formulaMode === 'simple') renderTrapezoid();
 }
 
 function updateFormulaOut() {
@@ -579,7 +579,7 @@ function updateFormulaOut() {
       : 'Period ratios: wk ' + Math.round(pf.wk * 100) + '% · qtr ' + pf.qtr.toFixed(1) + 'x · yr ' + pf.yr.toFixed(1) + 'x of monthly') + '</div>';
 }
 
-function renderPlane() {
+function renderTrapezoid() {
   const canvas = document.getElementById('planeCanvas');
   if (!canvas || formulaMode !== 'simple') return;
   const dpr = window.devicePixelRatio || 1;
@@ -588,94 +588,105 @@ function renderPlane() {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  const P = PERIODS, N = TIERS.length;
+
+  const N = TIERS.length, P = PERIODS;
+  const price = (i, j) => values[TIERS[i].id][P[j].id];
   let max = 0.01;
-  const grid = [];
-  TIERS.forEach((t, i) => {
-    grid[i] = [];
-    P.forEach((p, j) => {
-      grid[i][j] = values[t.id][p.id];
-      max = Math.max(max, grid[i][j]);
-    });
+  TIERS.forEach((t, i) => P.forEach((p, j) => { max = Math.max(max, values[t.id][p.id]); }));
+  // fixed axis so the Y curve visibly reshapes the trapezoid; expands only if prices exceed it
+  const axisMax = Math.max(3000, max);
+
+  const padL = 100, padR = 54, padT = 36, padB = 66;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const X = i => padL + (i / (N - 1)) * plotW;
+  const Y = v => padT + plotH - (v / axisMax) * plotH;
+
+  // Trapezoid corners — the outside of the pricing function:
+  // A bottom-left  = Brokeass weekly  (cheapest cell)
+  // B bottom-right = Friend weekly
+  // C top-right    = Friend annual    (most expensive cell)
+  // D top-left     = Brokeass annual
+  const A = { x: X(0), y: Y(price(0, 0)) };
+  const B = { x: X(N - 1), y: Y(price(N - 1, 0)) };
+  const C = { x: X(N - 1), y: Y(price(N - 1, 3)) };
+  const D = { x: X(0), y: Y(price(0, 3)) };
+
+  // y-axis ticks
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'right';
+  [0, 0.5, 1].forEach(t => {
+    const v = Math.round(axisMax * t);
+    const yy = Y(v);
+    ctx.fillStyle = '#6b7280';
+    ctx.fillText('$' + v, padL - 8, yy + 3);
+    ctx.strokeStyle = 'rgba(139,148,158,0.15)';
+    ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w - padR, yy); ctx.stroke();
   });
-  const cosY = Math.cos(0.62), sinY = Math.sin(0.62);
-  const cosX = Math.cos(0.38), sinX = Math.sin(0.38);
-  const fov = 9;
-  function proj(x, y, z) {
-    const x1 = x * cosY + z * sinY;
-    const z1 = -x * sinY + z * cosY;
-    const y2 = y * cosX - z1 * sinX;
-    const z2 = y * sinX + z1 * cosX;
-    const s = fov / (fov + z2);
-    return { x: x1 * s, y: y2 * s, d: z2 };
-  }
-  const cx = w * 0.52, cy = h * 0.52, scale = Math.min(w, h) / 7.6;
-  function pt(i, j, nz) {
-    const p = proj((i - (N - 1) / 2) * 1.15, (j - (P.length - 1) / 2) * 1.35, nz * 2.3);
-    return { x: cx + p.x * scale, y: cy - p.y * scale, d: p.d };
-  }
-  const px = (i, j) => pt(i, j, grid[i][j] / max);
-  // base plane grid
-  ctx.strokeStyle = 'rgba(139,148,158,0.25)';
-  ctx.lineWidth = 1;
+  ctx.fillText('$0', padL - 8, Y(0) + 3);
+
+  // trapezoid fill + outline
+  ctx.fillStyle = 'rgba(59,130,246,0.08)';
+  ctx.strokeStyle = 'rgba(59,130,246,0.85)';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.lineTo(C.x, C.y); ctx.lineTo(D.x, D.y);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  // actual data along each edge: dashed curve + dots
+  const drawPts = (pts, color) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    pts.slice(1).forEach(pt => ctx.lineTo(pt.x, pt.y));
+    ctx.stroke(); ctx.setLineDash([]);
+    pts.forEach(pt => {
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+    });
+  };
+  const wkPts = [], anPts = [], lfPts = [], rtPts = [];
   for (let i = 0; i < N; i++) {
-    const a = pt(i, 0, 0), b = pt(i, P.length - 1, 0);
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    wkPts.push({ x: X(i), y: Y(price(i, 0)) });
+    anPts.push({ x: X(i), y: Y(price(i, 3)) });
   }
   for (let j = 0; j < P.length; j++) {
-    const a = pt(0, j, 0), b = pt(N - 1, j, 0);
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    lfPts.push({ x: X(0), y: Y(price(0, j)) });
+    rtPts.push({ x: X(N - 1), y: Y(price(N - 1, j)) });
   }
-  // surface quads, back to front
-  const quads = [];
-  for (let i = 0; i < N - 1; i++) for (let j = 0; j < P.length - 1; j++) {
-    const c = [px(i, j), px(i + 1, j), px(i + 1, j + 1), px(i, j + 1)];
-    quads.push({ c, d: (c[0].d + c[1].d + c[2].d + c[3].d) / 4, v: (grid[i][j] + grid[i + 1][j] + grid[i + 1][j + 1] + grid[i][j + 1]) / 4 / max });
-  }
-  quads.sort((a, b) => b.d - a.d);
-  quads.forEach(q => {
-    const hue = 160 - 160 * q.v;
-    ctx.fillStyle = 'hsla(' + hue + ', 75%, 48%, 0.9)';
-    ctx.strokeStyle = 'hsla(' + hue + ', 75%, 30%, 0.9)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(q.c[0].x, q.c[0].y);
-    q.c.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  });
+  drawPts(wkPts, '#3b82f6');
+  drawPts(anPts, '#10b981');
+  drawPts(lfPts, '#a78bfa');
+  drawPts(rtPts, '#a78bfa');
+
+  // corner labels
+  ctx.font = 'bold 10px sans-serif';
+  const corner = (pt, txt, color, align) => {
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.fillText(txt, pt.x + (align === 'left' ? 8 : -8), pt.y + 3);
+  };
+  corner(A, 'Brokeass /wk $' + price(0, 0), '#3b82f6', 'right');
+  corner(B, 'Friend /wk $' + price(N - 1, 0), '#3b82f6', 'left');
+  corner(C, 'Friend /yr $' + price(N - 1, 3), '#10b981', 'left');
+  corner(D, 'Brokeass /yr $' + price(0, 3), '#10b981', 'right');
+
   // axis labels
   ctx.fillStyle = '#8b949e';
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
-  TIERS.forEach((t, i) => {
-    const p = pt(i, P.length - 1, 0);
-    ctx.fillText(t.name, p.x, p.y + 16);
-  });
+  TIERS.forEach((t, i) => ctx.fillText(t.name, X(i), h - padB + 18));
   ctx.textAlign = 'right';
-  PERIODS.forEach((p, j) => {
-    const q = pt(N - 1, j, 0);
-    ctx.fillText(p.short, q.x + 12, q.y + 4);
+  P.forEach((p, j) => {
+    const pt = lfPts[j];
+    ctx.fillText(p.name, padL - 8, pt.y + 3);
   });
-  // legend
-  const lx = 14, ly = h - 34, lw = 120, lh = 8;
-  const grad = ctx.createLinearGradient(lx, 0, lx + lw, 0);
-  grad.addColorStop(0, 'hsl(160,75%,48%)');
-  grad.addColorStop(1, 'hsl(0,75%,48%)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(lx, ly, lw, lh);
-  ctx.fillStyle = '#8b949e';
-  ctx.font = '9px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('$0', lx, ly + 20);
-  ctx.textAlign = 'right';
-  ctx.fillText('$' + Math.round(max), lx + lw, ly + 20);
   ctx.textAlign = 'center';
-  ctx.fillText('X = tier · Y = billing period · height/colour = price', w / 2, h - 8);
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '9px sans-serif';
+  ctx.fillText('Top edge = annual · bottom edge = weekly · left/right = Brokeass/Friend period spreads · X = tier, Y = price', w / 2, h - 8);
 }
 
-window.addEventListener('resize', () => { if (formulaMode === 'simple') renderPlane(); });
+window.addEventListener('resize', () => { if (formulaMode === 'simple') renderTrapezoid(); });
 
 // ---- quick-set sliders ----------------------------------------------------
 const SLIDER_CFG = [
