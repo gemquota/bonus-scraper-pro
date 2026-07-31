@@ -113,9 +113,30 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     </div>
   </div>
 
+  <!-- Price differences -->
+  <div class="card">
+    <h2>4. Price Differences Between Periods</h2>
+    <p class="sub" style="margin-bottom:14px">How much you save per year by switching between billing periods, per tier. Steeper slope on the line chart = bigger difference between periods.</p>
+    <div class="tables-grid">
+      <div class="pb-table" id="diffTable"></div>
+    </div>
+    <div class="charts-grid" style="margin-top:20px">
+      <div class="chart-box">
+        <h3>Annual Cost by Billing Period</h3>
+        <p class="cap">Line per tier. The drop from Weekly to Annual is the total difference within each tier.</p>
+        <div class="chart-wrap"><canvas id="diffLineChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>Savings vs Paying Weekly</h3>
+        <p class="cap">How much you save per year by choosing Monthly, Quarterly or Annual instead of Weekly — per tier.</p>
+        <div class="chart-wrap"><canvas id="diffBarChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Charts -->
   <div class="card">
-    <h2>4. Charts</h2>
+    <h2>5. Charts</h2>
     <div class="legend" id="legend"></div>
     <div class="charts-grid">
       <div class="chart-box">
@@ -550,6 +571,93 @@ function resetDefaults() {
   renderAll();
 }
 
+function renderDiffTable() {
+  const wrap = document.getElementById('diffTable');
+  const pairs = [
+    ['weekly', 'monthly', 'Weekly to Monthly'],
+    ['monthly', 'quarterly', 'Monthly to Quarterly'],
+    ['quarterly', 'annual', 'Quarterly to Annual'],
+    ['weekly', 'quarterly', 'Weekly to Quarterly'],
+    ['monthly', 'annual', 'Monthly to Annual'],
+    ['weekly', 'annual', 'Weekly to Annual'],
+  ];
+  let html = '<h3>Yearly Savings by Switching Periods</h3><table><tr><th>Switch</th>';
+  TIERS.forEach(t => html += '<th>' + t.name + '</th>');
+  html += '</tr>';
+  pairs.forEach(([from, to, label]) => {
+    html += '<tr><td>' + label + '</td>';
+    TIERS.forEach(t => {
+      const save = toAnnual(t.id, from) - toAnnual(t.id, to);
+      const cls = save > 0 ? 'best' : '';
+      html += '<td class="' + cls + '">' + fmt(save) + '/yr</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+function renderDiffLine() {
+  const ctx = document.getElementById('diffLineChart').getContext('2d');
+  charts.diffLine = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: PERIODS.map(p => p.name),
+      datasets: TIERS.map(t => ({
+        label: t.name,
+        data: PERIODS.map(p => toAnnual(t.id, p.id)),
+        borderColor: t.color,
+        backgroundColor: t.color + '22',
+        fill: true,
+        tension: 0,
+        pointRadius: 5,
+        pointBackgroundColor: t.color,
+        pointBorderColor: '#0d1117',
+        pointBorderWidth: 2,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, beginAtZero: true,
+             title: { display: true, text: 'Annual-equivalent cost (USD)', color: '#8b949e' } },
+      },
+    },
+  });
+}
+
+function renderDiffBar() {
+  const ctx = document.getElementById('diffBarChart').getContext('2d');
+  const periods = [
+    { id: 'monthly', label: 'Monthly' },
+    { id: 'quarterly', label: 'Quarterly' },
+    { id: 'annual', label: 'Annual' },
+  ];
+  charts.diffBar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: TIERS.map(t => t.name),
+      datasets: periods.map(p => ({
+        label: p.label + ' vs Weekly',
+        data: TIERS.map(t => Math.max(0, Math.round(toAnnual(t.id, 'weekly') - toAnnual(t.id, p.id)))),
+        backgroundColor: p.id === 'monthly' ? '#3b82f6' : p.id === 'quarterly' ? '#a78bfa' : '#10b981',
+        borderRadius: 6,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b949e' } } },
+      scales: {
+        x: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, beginAtZero: true,
+             title: { display: true, text: 'Saved per year vs weekly (USD)', color: '#8b949e' } },
+      },
+    },
+  });
+}
+
 function renderLegend() {
   const leg = document.getElementById('legend');
   leg.innerHTML = TIERS.map(t => `<span><span class="dot" style="background:${t.color}"></span>${t.name}</span>`).join('');
@@ -559,6 +667,9 @@ function renderAll() {
   destroyCharts();
   renderTables();
   renderPerDay();
+  renderDiffTable();
+  renderDiffLine();
+  renderDiffBar();
   renderBar();
   renderHeatmap();
   renderPerDayChart();
