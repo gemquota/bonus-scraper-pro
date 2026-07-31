@@ -46,6 +46,9 @@ async function createApp() {
 
   // Pages
   app.get('/', (req, res) => res.render('pages/index'));
+  // Diagnostics for deployment debugging (safe to remove)
+  app.get('/__raw', (req, res) => res.send('raw ok'));
+  app.get('/__render', (req, res) => res.render('pages/index'));
   app.get('/pricing', (req, res) => res.render('pages/pricing', { checkout: req.query.checkout }));
   app.get('/docs', (req, res) => res.render('pages/docs'));
 
