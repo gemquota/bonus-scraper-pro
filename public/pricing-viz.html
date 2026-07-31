@@ -205,7 +205,7 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     <div class="charts-grid" style="margin-top:20px">
       <div class="chart-box">
         <h3>Annual Cost by Billing Period</h3>
-        <p class="cap">Line per tier. The drop from Weekly to Annual is the total difference within each tier.</p>
+        <p class="cap">Line per billing period, across tiers. The gap between Weekly and Annual = savings from committing.</p>
         <div class="chart-wrap"><canvas id="diffLineChart"></canvas></div>
       </div>
       <div class="chart-box">
@@ -227,17 +227,17 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     <div class="charts-grid" style="margin-top:20px">
       <div class="chart-box">
         <h3>Period Premium — Shorter vs Longer</h3>
-        <p class="cap">% more per year when billing weekly instead of monthly, monthly instead of quarterly, etc. Taller bar = bigger penalty for the shorter period.</p>
+        <p class="cap">% more per year when billing weekly instead of monthly, etc. — per tier. Taller bar = bigger penalty.</p>
         <div class="chart-wrap"><canvas id="gPeriodChart"></canvas></div>
       </div>
       <div class="chart-box">
         <h3>Tier Growth — Across All Tiers</h3>
-        <p class="cap">% price increase between tiers for each billing period. Shows how steep the upgrade ladder is.</p>
+        <p class="cap">% price increase between tiers, one bar per billing period. Shows how steep the upgrade ladder is.</p>
         <div class="chart-wrap"><canvas id="gTierChart"></canvas></div>
       </div>
       <div class="chart-box full">
         <h3>Growth Heatmap</h3>
-        <p class="cap">Left: period premium per tier (red intensity = bigger penalty). Right: tier growth per period (amber intensity = steeper upgrade).</p>
+        <p class="cap">Left: period premium per tier (red intensity = bigger penalty). Right: tier growth, one row per billing period (amber intensity = steeper upgrade).</p>
         <div id="gHeatmap"></div>
       </div>
     </div>
@@ -250,22 +250,22 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
     <div class="charts-grid">
       <div class="chart-box">
         <h3>Price by Billing Period</h3>
-        <p class="cap">Volume = price. Grouped bars, one per tier.</p>
+        <p class="cap">Grouped bars, one per billing period, per tier.</p>
         <div class="chart-wrap"><canvas id="barChart"></canvas></div>
       </div>
       <div class="chart-box">
         <h3>Price Heatmap</h3>
-        <p class="cap">Colour intensity = price magnitude across all 12 cells.</p>
-        <div class="heat-grid" id="heatmap"></div>
+        <p class="cap">Colour intensity = price magnitude across all 24 cells (6 tiers × 4 periods).</p>
+        <div class="heat-grid cols-6" id="heatmap"></div>
       </div>
       <div class="chart-box">
         <h3>Cost Per Day</h3>
-        <p class="cap">Horizontal bars — the cheaper the billing period, the shorter the bar. Volume = $/day.</p>
+        <p class="cap">Horizontal bars — one bar per billing period within each tier.</p>
         <div class="chart-wrap"><canvas id="perdayChart"></canvas></div>
       </div>
       <div class="chart-box">
         <h3>Bubble Chart</h3>
-        <p class="cap">Bubble volume = price. X = period, Y = price, colour = tier.</p>
+        <p class="cap">Bubble volume = price. X = tier, Y = price, colour = billing period.</p>
         <div class="chart-wrap"><canvas id="bubbleChart"></canvas></div>
       </div>
       <div class="chart-box">
@@ -275,13 +275,13 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
         <div class="chart-wrap"><canvas id="cumChart"></canvas></div>
       </div>
       <div class="chart-box">
-        <h3>Radar — Period Cost Shape</h3>
-        <p class="cap">Normalised price across the 4 periods. The larger the area, the more you pay.</p>
+        <h3>Radar — Tier Cost Shape</h3>
+        <p class="cap">Normalised price across the 6 tiers. Lines = billing periods.</p>
         <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
       </div>
       <div class="chart-box">
         <h3>Treemap</h3>
-        <p class="cap">Area = price. Column width = tier's total annual-equivalent cost.</p>
+        <p class="cap">Area = price. Column width = tier's total annual-equivalent cost. 24 cells = 6 tiers x 4 periods.</p>
         <div class="tree" id="treemap"></div>
       </div>
     </div>
@@ -299,17 +299,17 @@ h1 { font-size: 1.6rem; margin-bottom: 4px; }
       </div>
       <div class="chart-box">
         <h3>Per-Day Heatmap</h3>
-        <p class="cap">Colour intensity = $/day across all 12 cells.</p>
-        <div class="heat-grid" id="pdHeatmap"></div>
+        <p class="cap">Colour intensity = $/day across all 24 cells (6 tiers × 4 periods).</p>
+        <div class="heat-grid cols-6" id="pdHeatmap"></div>
       </div>
       <div class="chart-box">
         <h3>Per-Day Radar</h3>
-        <p class="cap">Normalised $/day across periods. Larger area = costs more per day.</p>
+        <p class="cap">Normalised $/day across the 6 tiers. Lines = billing periods.</p>
         <div class="chart-wrap"><canvas id="pdRadar"></canvas></div>
       </div>
       <div class="chart-box">
         <h3>Per-Day Bubble</h3>
-        <p class="cap">Bubble size = $/day. X = period, Y = $/day, colour = tier.</p>
+        <p class="cap">Bubble size = $/day. X = tier, Y = $/day, colour = billing period.</p>
         <div class="chart-wrap"><canvas id="pdBubble"></canvas></div>
       </div>
     </div>
@@ -1094,11 +1094,11 @@ function renderBar() {
   charts.bar = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: PERIODS.map(p => p.name),
-      datasets: TIERS.map(t => ({
-        label: t.name,
-        data: PERIODS.map(p => values[t.id][p.id]),
-        backgroundColor: t.color,
+      labels: TIERS.map(t => t.name),
+      datasets: PERIODS.map(p => ({
+        label: p.name,
+        data: TIERS.map(t => values[t.id][p.id]),
+        backgroundColor: PERIOD_COLORS[p.id],
         borderRadius: 6,
       })),
     },
@@ -1117,10 +1117,10 @@ function renderHeatmap() {
   const wrap = document.getElementById('heatmap');
   const max = scaleFactor();
   let html = '<div class="hc"></div>';
-  PERIODS.forEach(p => html += `<div class="hc">${p.name}</div>`);
-  TIERS.forEach(t => {
-    html += `<div class="hc" style="color:${t.color};font-weight:700">${t.name}</div>`;
-    PERIODS.forEach(p => {
+  TIERS.forEach(t => html += `<div class="hc" style="color:${t.color};font-weight:700">${t.name}</div>`);
+  PERIODS.forEach(p => {
+    html += `<div class="hc">${p.name}</div>`;
+    TIERS.forEach(t => {
       const v = values[t.id][p.id];
       const inten = v / max;
       const alpha = 0.15 + 0.85 * inten;
@@ -1136,11 +1136,11 @@ function renderPerDayChart() {
   charts.perday = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: PERIODS.map(p => p.name),
-      datasets: TIERS.map(t => ({
-        label: t.name,
-        data: PERIODS.map(p => +perDay(t.id, p.id).toFixed(2)),
-        backgroundColor: t.color,
+      labels: TIERS.map(t => t.name),
+      datasets: PERIODS.map(p => ({
+        label: p.name,
+        data: TIERS.map(t => +perDay(t.id, p.id).toFixed(2)),
+        backgroundColor: PERIOD_COLORS[p.id],
         borderRadius: 6,
       })),
     },
@@ -1160,26 +1160,26 @@ function renderBubble() {
   const ctx = document.getElementById('bubbleChart').getContext('2d');
   const max = scaleFactor();
   const data = [];
-  TIERS.forEach(t => {
-    PERIODS.forEach((p, i) => {
+  PERIODS.forEach((p, i) => {
+    TIERS.forEach(t => {
       const v = values[t.id][p.id];
-      data.push({ x: i, y: v, r: 4 + (v / max) * 22, tier: t.name });
+      data.push({ x: i, y: v, r: 4 + (v / max) * 22, period: p.id });
     });
   });
   charts.bubble = new Chart(ctx, {
     type: 'bubble',
-    data: { datasets: TIERS.map(t => ({
-      label: t.name,
-      data: data.filter(d => d.tier === t.name),
-      backgroundColor: t.color + '99',
-      borderColor: t.color,
+    data: { datasets: PERIODS.map(p => ({
+      label: p.name,
+      data: data.filter(d => d.period === p.id),
+      backgroundColor: PERIOD_COLORS[p.id] + '99',
+      borderColor: PERIOD_COLORS[p.id],
       borderWidth: 1.5,
     }))},
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { labels: { color: '#8b949e' } } },
       scales: {
-        x: { type: 'category', labels: PERIODS.map(p => p.name), ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        x: { type: 'category', labels: TIERS.map(t => t.name), ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
         y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, beginAtZero: true, title: { display: true, text: 'Price (USD)', color: '#8b949e' } },
       },
     },
@@ -1233,13 +1233,13 @@ function renderRadar() {
   charts.radar = new Chart(ctx, {
     type: 'radar',
     data: {
-      labels: PERIODS.map(p => p.name),
-      datasets: TIERS.map(t => ({
-        label: t.name,
-        data: PERIODS.map(p => values[t.id][p.id] / max * 100),
-        backgroundColor: t.color + '44',
-        borderColor: t.color,
-        pointBackgroundColor: t.color,
+      labels: TIERS.map(t => t.name),
+      datasets: PERIODS.map(p => ({
+        label: p.name,
+        data: TIERS.map(t => values[t.id][p.id] / max * 100),
+        backgroundColor: PERIOD_COLORS[p.id] + '44',
+        borderColor: PERIOD_COLORS[p.id],
+        pointBackgroundColor: PERIOD_COLORS[p.id],
       })),
     },
     options: {
@@ -1393,16 +1393,16 @@ function renderDiffLine() {
   charts.diffLine = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: PERIODS.map(p => p.name),
-      datasets: TIERS.map(t => ({
-        label: t.name,
-        data: PERIODS.map(p => toAnnual(t.id, p.id)),
-        borderColor: t.color,
-        backgroundColor: t.color + '22',
+      labels: TIERS.map(t => t.name),
+      datasets: PERIODS.map(p => ({
+        label: p.name,
+        data: TIERS.map(t => toAnnual(t.id, p.id)),
+        borderColor: PERIOD_COLORS[p.id],
+        backgroundColor: PERIOD_COLORS[p.id] + '22',
         fill: true,
         tension: 0,
         pointRadius: 5,
-        pointBackgroundColor: t.color,
+        pointBackgroundColor: PERIOD_COLORS[p.id],
         pointBorderColor: '#0d1117',
         pointBorderWidth: 2,
       })),
@@ -1523,11 +1523,11 @@ function renderGPeriodChart() {
   charts.gPeriod = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: PERIOD_PAIRS.map(p => p.label),
-      datasets: TIERS.map(t => ({
-        label: t.name,
-        data: PERIOD_PAIRS.map(p => Math.round(periodPremium(t.id, p.short, p.long))),
-        backgroundColor: t.color,
+      labels: TIERS.map(t => t.name),
+      datasets: PERIOD_PAIRS.map((pair, pi) => ({
+        label: pair.label,
+        data: TIERS.map(t => Math.round(periodPremium(t.id, pair.short, pair.long))),
+        backgroundColor: ['#3b82f6', '#a78bfa', '#f59e0b', '#ef4444'][pi],
         borderRadius: 6,
       })),
     },
@@ -1548,11 +1548,11 @@ function renderGTierChart() {
   charts.gTier = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: PERIODS.map(p => p.name),
-      datasets: TIER_PAIRS.map(pair => ({
-        label: pair.label,
-        data: PERIODS.map(p => Math.round(tierGrowth(p.id, pair.low, pair.high))),
-        backgroundColor: TIERS.find(t => t.id === pair.low).color,
+      labels: TIER_PAIRS.map(pair => pair.label),
+      datasets: PERIODS.map(p => ({
+        label: p.name,
+        data: TIER_PAIRS.map(pair => Math.round(tierGrowth(p.id, pair.low, pair.high))),
+        backgroundColor: PERIOD_COLORS[p.id],
         borderRadius: 6,
       })),
     },
@@ -1583,11 +1583,11 @@ function renderGHeatmap() {
     });
   });
   html += '</div>';
-  html += '<div class="heat-grid"><div class="hc"></div>';
-  PERIODS.forEach(p => html += '<div class="hc">' + p.name + '</div>');
-  TIER_PAIRS.forEach(pair => {
-    html += '<div class="hc">' + pair.label + '</div>';
-    PERIODS.forEach(p => {
+  html += '<div class="heat-grid cols-6"><div class="hc"></div>';
+  TIER_PAIRS.forEach(pair => html += '<div class="hc">' + pair.label + '</div>');
+  PERIODS.forEach(p => {
+    html += '<div class="hc">' + p.name + '</div>';
+    TIER_PAIRS.forEach(pair => {
       const v = tierGrowth(p.id, pair.low, pair.high) || 0;
       html += '<div class="heat-cell" style="background:' + growthColor(v, tgMax, '245,158,11') + '"><span><span class="hlabel">price +</span>' + fmtPct(v) + '</span></div>';
     });
@@ -1631,10 +1631,10 @@ function renderPerDayHeatmap() {
   const wrap = document.getElementById('pdHeatmap');
   const max = pdMax();
   let html = '<div class="hc"></div>';
-  PERIODS.forEach(p => html += '<div class="hc">' + p.name + '</div>');
-  TIERS.forEach(t => {
-    html += '<div class="hc" style="color:' + t.color + ';font-weight:700">' + t.name + '</div>';
-    PERIODS.forEach(p => {
+  TIERS.forEach(t => html += '<div class="hc" style="color:' + t.color + ';font-weight:700">' + t.name + '</div>');
+  PERIODS.forEach(p => {
+    html += '<div class="hc">' + p.name + '</div>';
+    TIERS.forEach(t => {
       const v = perDay(t.id, p.id);
       const alpha = 0.15 + 0.85 * (v / max);
       html += '<div class="heat-cell" style="background:rgba(59,130,246,' + alpha + ')">'
@@ -1650,13 +1650,13 @@ function renderPerDayRadar() {
   charts.pdRadar = new Chart(ctx, {
     type: 'radar',
     data: {
-      labels: PERIODS.map(p => p.name),
-      datasets: TIERS.map(t => ({
-        label: t.name,
-        data: PERIODS.map(p => perDay(t.id, p.id) / max * 100),
-        backgroundColor: t.color + '44',
-        borderColor: t.color,
-        pointBackgroundColor: t.color,
+      labels: TIERS.map(t => t.name),
+      datasets: PERIODS.map(p => ({
+        label: p.name,
+        data: TIERS.map(t => perDay(t.id, p.id) / max * 100),
+        backgroundColor: PERIOD_COLORS[p.id] + '44',
+        borderColor: PERIOD_COLORS[p.id],
+        pointBackgroundColor: PERIOD_COLORS[p.id],
       })),
     },
     options: {
@@ -1679,26 +1679,26 @@ function renderPerDayBubble() {
   const ctx = document.getElementById('pdBubble').getContext('2d');
   const max = pdMax();
   const data = [];
-  TIERS.forEach(t => {
-    PERIODS.forEach((p, i) => {
+  PERIODS.forEach((p, i) => {
+    TIERS.forEach(t => {
       const v = perDay(t.id, p.id);
-      data.push({ x: i, y: +v.toFixed(2), r: 4 + (v / max) * 22, tier: t.name });
+      data.push({ x: i, y: +v.toFixed(2), r: 4 + (v / max) * 22, period: p.id });
     });
   });
   charts.pdBubble = new Chart(ctx, {
     type: 'bubble',
-    data: { datasets: TIERS.map(t => ({
-      label: t.name,
-      data: data.filter(d => d.tier === t.name),
-      backgroundColor: t.color + '99',
-      borderColor: t.color,
+    data: { datasets: PERIODS.map(p => ({
+      label: p.name,
+      data: data.filter(d => d.period === p.id),
+      backgroundColor: PERIOD_COLORS[p.id] + '99',
+      borderColor: PERIOD_COLORS[p.id],
       borderWidth: 1.5,
     }))},
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { labels: { color: '#8b949e' } } },
       scales: {
-        x: { type: 'category', labels: PERIODS.map(p => p.name), ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
+        x: { type: 'category', labels: TIERS.map(t => t.name), ticks: { color: '#8b949e' }, grid: { color: '#2d333b' } },
         y: { ticks: { color: '#8b949e' }, grid: { color: '#2d333b' }, beginAtZero: true, title: { display: true, text: 'Cost per day (USD)', color: '#8b949e' } },
       },
     },
@@ -1707,7 +1707,7 @@ function renderPerDayBubble() {
 
 function renderLegend() {
   const leg = document.getElementById('legend');
-  leg.innerHTML = TIERS.map(t => `<span><span class="dot" style="background:${t.color}"></span>${t.name}</span>`).join('');
+  leg.innerHTML = PERIODS.map(p => `<span><span class="dot" style="background:${PERIOD_COLORS[p.id]}"></span>${p.name}</span>`).join('');
 }
 
 function renderAll() {
