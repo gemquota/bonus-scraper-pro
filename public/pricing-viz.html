@@ -454,7 +454,7 @@ const FORMULA_ADV = [
 ];
 const FORMULA_SIMPLE = [
   { id: 'fX', label: 'X · Tier Curve', min: 5, max: 100, step: 5, fmt: v => v + '% growth per tier step' },
-  { id: 'fY', label: 'Y · Period Curve', min: 0, max: 100, step: 1, fmt: v => v + '% commitment discount' },
+  { id: 'fY', label: 'Y · Period Curve', min: 0, max: 100, step: 1, fmt: v => v + '% · annual ' + (9 - v * 0.03).toFixed(1) + 'x' },
 ];
 let formulaMode = 'advanced';
 let formula = { fBase: 10, g1: 100, g2: 75, g3: 50, g4: 30, g5: 40, fWk: 30, fQtr: 2.5, fYr: 9, fX: 60, fY: 100 };
@@ -480,7 +480,7 @@ function computeMonthly() {
 function periodFactors() {
   if (formulaMode === 'simple') {
     const s = formula.fY / 100;
-    return { wk: 0.5 - 0.2 * s, qtr: 3 - 0.5 * s, yr: 12 - 3 * s };
+    return { wk: 0.3 + 0.2 * s, qtr: 2.5 + 0.5 * s, yr: 9 - 3 * s };
   }
   return { wk: formula.fWk / 100, qtr: formula.fQtr, yr: formula.fYr };
 }
@@ -530,7 +530,7 @@ function syncFormulaFromValues() {
   formula.fYr = clampSlider('fYr', Math.round(values.tier1.annual / m1 * 2) / 2);
   const avg = (formula.g1 + formula.g2 + formula.g3 + formula.g4 + formula.g5) / 5;
   formula.fX = clampSlider('fX', Math.round(avg / 5) * 5);
-  formula.fY = clampSlider('fY', Math.round((12 - formula.fYr) / 3 * 100));
+  formula.fY = clampSlider('fY', Math.round((9 - formula.fYr) / 3 * 100));
   formulaConfig().forEach(cfg => {
     const el = document.getElementById('fslider-' + cfg.id);
     const valEl = document.getElementById('fval-' + cfg.id);
@@ -565,8 +565,14 @@ function updateFormulaOut() {
   if (!out) return;
   const ms = computeMonthly();
   const pf = periodFactors();
+  const w = (v) => Math.max(1, Math.round(v * pf.wk));
+  const q = (v) => Math.max(3, Math.round(v * pf.qtr));
+  const y = (v) => Math.max(12, Math.round(v * pf.yr));
+  const mid = TIERS[1];
+  const mm = ms[1];
   out.innerHTML = '<div class="fo-label">Monthly output from this formula</div>' +
     TIERS.map((t, i) => t.name + ' <strong>$' + ms[i] + '</strong>').join(' &nbsp;·&nbsp; ') +
+    '<div style="margin-top:6px">e.g. ' + mid.name + ': <strong>$' + w(mm) + '/wk</strong> · <strong>$' + mm + '/mo</strong> · <strong>$' + q(mm) + '/qtr</strong> · <strong>$' + y(mm) + '/yr</strong></div>' +
     '<div style="margin-top:6px;opacity:.8">' +
     (formulaMode === 'simple'
       ? 'X curve: +' + formula.fX + '% per tier · Y curve: ' + formula.fY + '% commitment discount (wk ' + Math.round(pf.wk * 100) + '% · qtr ' + pf.qtr.toFixed(1) + 'x · yr ' + pf.yr.toFixed(1) + 'x of monthly)'
